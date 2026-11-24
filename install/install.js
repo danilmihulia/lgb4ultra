@@ -9,6 +9,8 @@
 //                         until the next compositor restart)
 //     --no-adblock        skip the /etc/hosts ad/tracker blocking
 //     --no-privacy        don't switch off LG's ad / tracking / recommendation settings
+//     --recommended-settings  also apply the author's TV settings (presets/settings-recommended.json: picture per
+//                         input and mode, PS5 game mode, sound, power, privacy…) — a suggestion; see README
 //     --force             skip the model / firmware check (NOT recommended: untested on anything else)
 //     --yes               don't ask before installing / rebooting
 // Everything is reversible: node install/uninstall.js <TV-IP>. Nothing in LG's read-only system image is changed;
@@ -26,8 +28,8 @@ const argv = process.argv.slice(2), flag = f => argv.includes(f);
 const host = argv.find(a => !a.startsWith('--') && argv[argv.indexOf(a) - 1] !== '--key');
 const ki = argv.indexOf('--key'), key = ki >= 0 ? argv[ki + 1] : null;
 const O = { dry: flag('--dry-run'), compare: flag('--compare'), early: !flag('--no-early'), smRestart: !flag('--no-sm-restart'),
-  adblock: !flag('--no-adblock'), privacy: !flag('--no-privacy'), force: flag('--force'), yes: flag('--yes') };
-if (!host) { console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(1, 16).map(l => l.replace(/^\/\/ ?/, '')).join('\n')); process.exit(1); }
+  adblock: !flag('--no-adblock'), privacy: !flag('--no-privacy'), force: flag('--force'), yes: flag('--yes'), rec: flag('--recommended-settings') };
+if (!host) { console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(1, 18).map(l => l.replace(/^\/\/ ?/, '')).join('\n')); process.exit(1); }
 const tv = TV.make({ host, key });
 const step = s => console.log('\n== ' + s);
 const ask = q => O.yes ? Promise.resolve(true) : new Promise(res => { const rl = readline.createInterface({ input: process.stdin, output: process.stdout }); rl.question(q + ' [y/N] ', a => { rl.close(); res(/^y(es)?$/i.test(a.trim())); }); });
@@ -154,6 +156,12 @@ ${PRIV.map(p => setS(...p)).join('\n')}
 sync`, { timeout: 600000 });
   console.log(out.trimEnd());
   fs.rmSync(W, { recursive: true, force: true });
+  if (O.rec) {
+    step('Applying the recommended settings (presets/settings-recommended.json)');
+    const env = Object.assign({}, process.env, { TV_IP: host }, key ? { TV_KEY: path.resolve(key) } : {});
+    execFileSync(process.execPath, [path.join(R, 'scripts/settings-restore.js'), path.join(R, 'presets/settings-recommended.json'), '--apply'],
+      { env, stdio: ['ignore', 'pipe', 'inherit'] }).toString().split('\n').filter(l => /differ|written|refused/.test(l)).forEach(l => console.log('  ' + l.trim()));
+  }
   console.log('\nInstalled. Everything starts at the next boot.');
   if (await ask('Reboot the TV now?')) { tv.sh('(sleep 1; reboot) >/dev/null 2>&1 &', { allowFail: true }); console.log('Rebooting… our hub appears ~40 s after power-on.'); }
   else console.log('Reboot later (unplug or "reboot" over ssh) to start it.');

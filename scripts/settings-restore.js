@@ -2,14 +2,19 @@
 //   node scripts/settings-restore.js backups/settings/settings-snapshot-XXXX.json            → only SHOWS what differs
 //   node scripts/settings-restore.js <snapshot> --apply                                      → writes the differing values
 //   node scripts/settings-restore.js <snapshot> --apply --only "picture|aiPicture"           → only these categories
+//   --tv <TV-IP> --key <ssh key>   which TV (default: config/device.local.json, or the TV_IP / TV_KEY variables)
+// Also applies presets/settings-recommended.json (the author's settings) the same way.
 // Writes use "valueCheck":false + the stored dimension: picture modes of a signal type that is not playing right now
 // (HDR, Dolby Vision) are otherwise refused by settingsservice ("No matched extended item").
 'use strict';
 const fs = require('fs');
+const args = process.argv.slice(2), arg = n => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : null; };
+if (arg('--tv')) process.env.TV_IP = arg('--tv');
+if (arg('--key')) process.env.TV_KEY = require('path').resolve(arg('--key'));
 const { tvRun } = require('./tvssh');
-const args = process.argv.slice(2), file = args.find(a => !a.startsWith('--') && !/^\^?[\w|]+$/.test(a) || /\.json$/.test(a));
+const file = args.find(a => /\.json$/.test(a));
 const apply = args.includes('--apply'), oi = args.indexOf('--only'), only = oi >= 0 ? new RegExp('^(' + args[oi + 1] + ')$') : null;
-if (!file) { console.log('usage: node scripts/settings-restore.js <snapshot.json> [--apply] [--only "cat1|cat2"]'); process.exit(1); }
+if (!file) { console.log('usage: node scripts/settings-restore.js <snapshot.json> [--tv <TV-IP> --key <ssh key>] [--apply] [--only "cat1|cat2"]'); process.exit(1); }
 
 const snap = JSON.parse(fs.readFileSync(file, 'utf8')), seen = new Set(), E = [];
 for (const e of snap.entries) {

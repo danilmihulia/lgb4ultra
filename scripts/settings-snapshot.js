@@ -6,6 +6,9 @@
 //   node scripts/settings-snapshot.js            (reads only — nothing on the TV is changed)
 'use strict';
 const fs = require('fs'), path = require('path');
+const _a = process.argv.slice(2), _o = n => { const i = _a.indexOf(n); return i >= 0 ? _a[i + 1] : null; };
+if (_o('--tv')) process.env.TV_IP = _o('--tv');                              // which TV: --tv <IP> --key <ssh key>,
+if (_o('--key')) process.env.TV_KEY = require('path').resolve(_o('--key'));  // or config/device.local.json / TV_IP, TV_KEY
 const { tvRun, ROOT } = require('./tvssh');
 
 const html = fs.readFileSync(path.join(ROOT, 'app', 'index.html'), 'utf8');

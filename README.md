@@ -125,6 +125,38 @@ settings alone), `--yes` (don't ask).
 - **Remote:** HOME = hub · SETTINGS = hub settings · SOURCE = inputs · GUIDE = Channels · hold POWER = Power menu ·
   in the browser 🔴 = address bar, 🟢 = new tab, 🟡/🔵 = switch tabs.
 
+## Recommended settings and wallpapers (optional)
+
+Suggestions from the author's TV — not rules. Skip them and set everything yourself if you prefer.
+
+**TV settings** — `presets/settings-recommended.json`: all ~3600 values of the author's TV (picture for every input ×
+picture mode, sound, power, OLED care, privacy, accessibility…). Highlights:
+
+- apps / hub: **Cinema** (SDR), **HDR Cinema**, Dolby Vision **Cinema Bright** without AI brightness — accurate picture,
+  no motion smoothing;
+- PS5 on **HDMI 1**: Game Optimizer with VRR + ALLM, **HGIG** for HDR games, **Deep Colour** on, AI brightness off;
+  outside games Cinema / HDR Cinema;
+- OLED care: pixel shift on, logo dimming high; LG tips, ad cookies, HbbTV ID, automatic updates off.
+
+```
+node scripts/settings-snapshot.js --tv 192.168.1.50 --key ~/.ssh/lgb4ultra_ed25519
+node scripts/settings-restore.js presets/settings-recommended.json --tv 192.168.1.50 --key ~/.ssh/lgb4ultra_ed25519
+node scripts/settings-restore.js presets/settings-recommended.json --tv 192.168.1.50 --key ~/.ssh/lgb4ultra_ed25519 --apply
+```
+1st line: a backup of **your** settings (`backups/settings/…`, restore it the same way). 2nd: shows what would change.
+3rd: applies. Or add `--recommended-settings` to the install command. If your console is not on HDMI 1, the
+console part lands on the wrong input — use `--only "general|option|sound|other"` or set the picture yourself.
+
+**Wallpapers** — 115 pictures picked from the collections of wallhaven user
+[43PR](https://wallhaven.cc/user/43PR) (list: `presets/wallpapers/wallhaven.txt`). They are **not** stored here: the
+script downloads them from wallhaven.cc; the rights belong to their authors (personal use).
+
+```
+node scripts/get-wallpapers.js                                                     (→ ./wallpapers, then via USB)
+node scripts/get-wallpapers.js --tv 192.168.1.50 --key ~/.ssh/lgb4ultra_ed25519    (straight onto the TV)
+```
+Then open «Files» once — it makes screen-size copies of very large images so the slideshow stays light.
+
 ## Uninstall
 
 ```
