@@ -157,6 +157,10 @@ node scripts/get-wallpapers.js --tv 192.168.1.50 --key ~/.ssh/lgb4ultra_ed25519 
 ```
 Then open «Files» once — it makes screen-size copies of very large images so the slideshow stays light.
 
+## Security
+
+Root changes the TV's security model — read [SECURITY.md](SECURITY.md) (what is exposed, what we lock down, what is still open).
+
 ## Uninstall
 
 ```

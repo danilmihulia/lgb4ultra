@@ -151,6 +151,9 @@ for ipk in /tmp/lgb4u-ipk/*.ipk; do
   if [ -f /media/developer/apps/usr/palm/applications/$id/appinfo.json ]; then echo "  app $id installed"; else echo "  app $id FAILED: $(grep -o '"errorText": *"[^"]*"' $L | tail -1)"; fi
 done
 rm -rf /tmp/lgb4u-ipk /tmp/lgb4u-inst.log
+# security: websites in the browser must not reach Homebrew Channel's root service (see SECURITY.md) — applied now,
+# not only at the next boot (hook 43 also starts the browser helper)
+sh /var/lib/webosbrew/init.d/43-browser.sh && echo "  browser + channels: no access to system services"
 ${setS('other', 'lgLogoDisplay', 'off')}
 ${PRIV.map(p => setS(...p)).join('\n')}
 sync`, { timeout: 600000 });
