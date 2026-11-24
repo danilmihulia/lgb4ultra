@@ -1,0 +1,15 @@
+{
+  "id": "com.user.browser",
+  "version": "2.5.5",
+  "vendor": "User",
+  "type": "web",
+  "main": "index.html",
+  "title": "Браузер",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "iconColor": "#0ea5a4",
+  "bgColor": "#070708",
+  "disableBackHistoryAPI": true,
+  "noSplashOnLaunch": true,
+  "requiredACG": []
+}

@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920,height=1080,initial-scale=1">
+<title>Screen Saver</title>
+<style>
+  html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden;cursor:none;
+    font-family:-apple-system,'LG Smart UI','Helvetica Neue',Arial,sans-serif}
+  .layer{position:fixed;inset:0;background-size:cover;background-position:center;opacity:0;
+    transition:opacity 1.6s ease}
+  .layer.on{opacity:1}
+  #clock{position:fixed;left:0;top:0;text-align:center;
+    color:#fff;text-shadow:0 2px 34px rgba(0,0,0,.55);will-change:transform}
+  #time{font-size:112px;font-weight:200;letter-spacing:3px;line-height:1}
+  #date{font-size:34px;font-weight:300;letter-spacing:1px;margin-top:22px;opacity:.72}
+</style>
+</head>
+<body>
+  <div class="layer" id="a"></div>
+  <div class="layer" id="b"></div>
+  <div id="clock"><div id="time">--:--</div><div id="date"></div></div>
+<script>
+  // ---- interface language (chosen in the hub: settings category "myhome", key "uiLang"). Dictionary keys = Ukrainian text;
+  // L(s) = translation or s. Translations: i18n/<lang>.json next to this page (source: i18n/<app>/ in the project).
+  // our apps may NOT read settings (settingsservice → Access denied for com.user.*), so a root daemon on the TV
+  // (deploy/poweron/poweron-home.sh) writes the hub's choice into i18n/current.json next to each app
+  function curLang(){ try{ var x=new XMLHttpRequest(); x.open('GET','i18n/current.json',false); x.send(); return (JSON.parse(x.responseText)||{}).lang||null; }catch(e){ return null; } }
+  var UILANG=(function(){ var c=curLang(); if(c){ try{ localStorage.setItem('uiLang',c); }catch(e){} return c; } try{ return localStorage.getItem('uiLang')||'uk'; }catch(e){ return 'uk'; } })(), DICT=null;
+  if(UILANG!=='uk'){ try{ var lx=new XMLHttpRequest(); lx.open('GET','i18n/'+UILANG+'.json',false); lx.send(); if(lx.responseText) DICT=JSON.parse(lx.responseText); }catch(e){ DICT=null; } }
+  function L(s){ return (DICT && DICT[s]) || s; }
+  (function(){ if(!DICT || !document.body) return; document.documentElement.lang=UILANG;
+    var w=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false), n, list=[];
+    while((n=w.nextNode())) list.push(n);
+    list.forEach(function(t){ var v=t.nodeValue, k=v.replace(/\s+/g,' ').trim(); if(k && DICT[k]) t.nodeValue=v.replace(k, DICT[k]); });
+    [].forEach.call(document.querySelectorAll('[placeholder],[title]'), function(el){ ['placeholder','title'].forEach(function(a){ var v=el.getAttribute(a); if(v && DICT[v.trim()]) el.setAttribute(a, DICT[v.trim()]); }); });
+  })();
+  // language changed while this app was in the background → reload once when it comes back
+  function langCheck(){ var c=curLang(); if(c && c!==UILANG){ try{ localStorage.setItem('uiLang',c); }catch(e){} location.reload(); } }
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) langCheck(); });
+  document.addEventListener('webOSRelaunch', langCheck);
+  // System screensaver (bind-mounted over com.webos.app.screensaver by hook 29). Shown on idle and, via the
+  // inputcommon patch (hook 38), on HDMI «no signal». Same look & motion as the in-launcher saver.
+  var M=[L('січня'),L('лютого'),L('березня'),L('квітня'),L('травня'),L('червня'),L('липня'),L('серпня'),L('вересня'),L('жовтня'),L('листопада'),L('грудня')];
+  var list=[], order=[], oi=0, cur=0;
+  var els=[document.getElementById('a'), document.getElementById('b')];
+  var clock=document.getElementById('clock'), tEl=document.getElementById('time'), dEl=document.getElementById('date');
+  function sh(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+  function paint(){ var d=new Date();
+    tEl.textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+    dEl.textContent=d.getDate()+' '+M[d.getMonth()]+' '+d.getFullYear()+({uk:' р.',ru:' г.'}[UILANG]||''); }
+  // clock has no seconds → repaint exactly on the minute change (one timer, no polling)
+  function schedClock(){ paint(); setTimeout(schedClock, 60000-(Date.now()%60000)+50); }
+
+  // DVD bounce: precomputed path (~240 s, then alternate — seamless), one element, 30 synced steps/s via CSS
+  // steps() → straight lines, compositor-driven, ~1/3 the CPU of the old 60 fps JS loop.
+  function startDvd(){
+    var w=window.innerWidth||1920, h=window.innerHeight||1080, cw=clock.offsetWidth||420, ch=clock.offsetHeight||190;
+    var mx=Math.max(1,w-cw), my=Math.max(1,h-ch), FPS=30, VX=70, VY=52, T=240;
+    var x=Math.random()*mx, y=Math.random()*my, vx=(Math.random()<.5?-1:1)*VX, vy=(Math.random()<.5?-1:1)*VY, t=0, pts=[[0,x,y]];
+    while(t<T){
+      var tx = vx>0 ? (mx-x)/vx : -x/vx, ty = vy>0 ? (my-y)/vy : -y/vy, dt=Math.min(tx,ty,T-t);
+      x+=vx*dt; y+=vy*dt; t+=dt; pts.push([t,x,y]);
+      if(tx<=dt+1e-6) vx=-vx; if(ty<=dt+1e-6) vy=-vy;
+    }
+    var css='@keyframes dvd{';
+    for(var i=0;i<pts.length;i++){ var p=pts[i], seg = i<pts.length-1 ? Math.max(1, Math.round((pts[i+1][0]-p[0])*FPS)) : 1;
+      css+=(p[0]/t*100).toFixed(4)+'%{transform:translate('+p[1].toFixed(1)+'px,'+p[2].toFixed(1)+'px);animation-timing-function:steps('+seg+',end)}'; }
+    css+='}';
+    var st=document.createElement('style'); st.textContent=css; document.head.appendChild(st);
+    clock.style.animation='dvd '+t.toFixed(2)+'s linear 0s infinite alternate';
+  }
+
+  function wallSrc(name, cb){ var s='walls-screen/'+encodeURIComponent(name)+'.jpg', o='walls/'+encodeURIComponent(name), im=new Image(); im.onload=function(){ cb(im.src.indexOf('walls-screen/')>=0?s:o); }; im.onerror=function(){ if(im.src.indexOf('walls-screen/')>=0) im.src=o; }; im.src=s; return im; }   // копія під екран (оригінали 8K–12K забивали памʼять → аварійні перезавантаження), інакше оригінал
+  function next(){
+    if(!list.length) return;
+    if(oi>=order.length){ order=sh(list.slice()); oi=0; }
+    wallSrc(order[oi++], function(url){ cur=1-cur; els[cur].style.backgroundImage='url("'+url+'")'; els[cur].className='layer on'; els[1-cur].className='layer'; });
+    paint();
+  }
+
+  // Exit. If the current input is an HDMI source WITHOUT signal (e.g. PS5 asleep), go to our home instead of
+  // revealing a black «no signal» screen (user complaint 2026-11-20). Otherwise just close and return.
+  var gone=false;
+  function lunaCall(uri, params, cb){ try{ var b=new PalmServiceBridge(); (window._br=window._br||[]).push(b);
+    b.onservicecallback=function(s){ var r=null; try{ r=JSON.parse(s); }catch(e){} if(cb) cb(r); }; b.call(uri, JSON.stringify(params||{})); return true; }catch(e){ return false; } }
+  function closeSelf(){
+    // platformBack/window.close don't dismiss the saver window when launched by inputcommon → ask SAM explicitly
+    lunaCall('luna://com.webos.applicationManager/closeByAppId', {id:'com.webos.app.screensaver'});
+    try{ if(window.webOSSystem && window.webOSSystem.platformBack) window.webOSSystem.platformBack(); }catch(e){}
+    try{ window.close(); }catch(e){}
+  }
+  function bye(){
+    if(gone) return; gone=true;
+    var done=false, fin=function(){ if(done) return; done=true; closeSelf(); };
+    setTimeout(fin, 700);   // never hang on the reply
+    var ok=lunaCall('luna://com.webos.service.eim/getAllInputStatus', {}, function(r){
+      var noSignal=false;
+      ((r && r.devices) || []).forEach(function(d){ if(d && d.activate && /^HDMI/.test(d.id||'') && d.hdmiSignalExist===false) noSignal=true; });
+      if(noSignal) lunaCall('luna://com.webos.applicationManager/launch', {id:'com.webos.app.home'});
+      fin();
+    });
+    if(!ok) fin();
+  }
+  // any remote interaction exits: keys, clicks, wheel, touch, and a REAL pointer move (ignore tiny jitter)
+  ['keydown','mousedown','wheel','touchstart'].forEach(function(ev){ window.addEventListener(ev, bye, true); });
+  var mvX=null, mvY=null, mvD=0;
+  window.addEventListener('mousemove', function(e){
+    if(mvX===null){ mvX=e.clientX; mvY=e.clientY; return; }
+    mvD+=Math.abs(e.clientX-mvX)+Math.abs(e.clientY-mvY); mvX=e.clientX; mvY=e.clientY;
+    if(mvD>40) bye();
+  }, true);
+
+  schedClock(); startDvd();
+  fetch('walls.json').then(function(r){ return r.json(); }).then(function(a){
+    list=(a||[]).filter(Boolean); order=sh(list.slice()); oi=0; if(order.length){ wallSrc(order[0], function(){}); } next(); setInterval(next, 60000);
+  }).catch(function(){});
+</script>
+</body>
+</html>

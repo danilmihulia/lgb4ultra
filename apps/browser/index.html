@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Браузер</title>
+<style>
+  :root { --bg:#070708; --bar:#101014; --card:#18181d; --card2:#22222a; --txt:#f2f2f5; --dim:#8a8a96; --acc:#0ea5a4;
+    --tab:#16161b; --field:#0d0d11; --line:#1f1f26; --txt2:#c9c9d2; --nbt:#d6d6dd; --foc:#fff; --hov:#30303a; --pop:#16161c; --ic:#0d0d10; --txbg:#2c2c36; }
+  body.light { --bg:#f2f3f6; --bar:#ffffff; --card:#ffffff; --card2:#e9ecf1; --txt:#15161a; --dim:#6b6f7a;
+    --tab:#e6e9ee; --field:#eef0f4; --line:#d9dde4; --txt2:#3a3d45; --nbt:#2a2d35; --foc:#15161a; --hov:#d5dae2; --pop:#ffffff; --ic:#eef0f4; --txbg:#dfe3e9; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { width:1920px; height:1080px; overflow:hidden; background:var(--bg); color:var(--txt);
+    font-family:"LG Smart UI","Museo Sans",Roboto,Arial,sans-serif; }
+  input { font-family:inherit; }
+  /* ---- top bar ---- */
+  #bar { position:absolute; left:0; top:0; right:0; height:136px; background:var(--bar); border-bottom:1px solid var(--line); z-index:5; }
+  #tabs { display:flex; gap:8px; padding:10px 16px 0; height:62px; overflow:hidden; }
+  .tab { flex:0 1 300px; min-width:120px; height:52px; border-radius:14px 14px 0 0; background:var(--tab); display:flex; align-items:center;
+    gap:10px; padding:0 12px 0 14px; border:3px solid transparent; border-bottom:none; cursor:pointer; position:relative; }
+  .tab.act { background:var(--card2); }
+  .tab .fi { width:24px; height:24px; border-radius:6px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:15px; color:var(--dim); overflow:hidden; }
+  .tab .fi img { width:22px; height:22px; }
+  .tab .tt { font-size:20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; color:var(--txt2); }
+  .tab.act .tt { color:var(--txt); }
+  .tab .x { font-size:20px; color:var(--dim); width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; }
+  .tab .x:hover { background:var(--hov); color:var(--txt); }
+  .tab.load .fi::after { content:''; position:absolute; left:14px; top:12px; width:22px; height:22px; border:3px solid var(--acc); border-top-color:transparent; border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  #newtab { flex:0 0 52px; height:52px; border-radius:14px; background:var(--tab); display:flex; align-items:center; justify-content:center; font-size:30px; color:var(--txt2); border:3px solid transparent; cursor:pointer; }
+  #nav { display:flex; align-items:center; gap:10px; height:74px; padding:0 16px; background:var(--card2); }
+  .nb { width:58px; height:54px; border-radius:14px; display:flex; align-items:center; justify-content:center; color:var(--nbt); border:3px solid transparent; cursor:pointer; flex-shrink:0; }
+  .nb svg { width:28px; height:28px; }
+  .nb.off { opacity:.35; }
+  .fw { flex:1; position:relative; display:flex; }
+  #addr { flex:1; height:54px; border-radius:27px; background:var(--field); border:3px solid transparent; color:var(--txt); font-size:24px; padding:0 64px 0 26px; outline:none; }
+  .gob { position:absolute; right:6px; top:50%; transform:translateY(-50%); width:44px; height:42px; border-radius:21px; border:0 !important;
+    display:flex; align-items:center; justify-content:center; color:var(--txt); opacity:.45; cursor:pointer; }
+  .gob svg { width:26px; height:26px; }
+  .gob:hover, .gob.focus { opacity:1; background:var(--hov); }
+  #star.on { color:#facc15; }
+  .focus, #addr.focus, #addr:focus, #sq:focus { border-color:var(--foc) !important; }
+  .tab.focus, #newtab.focus, .nb.focus { background:var(--hov); }
+  #bar.flash { animation:barfl .9s ease; } @keyframes barfl { 0%,60% { background:var(--hov); } 100% { background:var(--bar); } }
+  /* settings */
+  #setp { position:absolute; right:16px; top:140px; width:640px; background:var(--pop); color:var(--txt); border:1px solid var(--line); border-radius:22px; padding:18px; z-index:30; display:none; box-shadow:0 24px 70px rgba(0,0,0,.7); }
+  #setp.show { display:block; }
+  #setbg { position:fixed; inset:0; z-index:29; display:none; } #setbg.show { display:block; }   /* click outside the panel (also over a site frame) closes it */
+  #setp h3 { font-size:26px; font-weight:600; margin:4px 8px 12px; }
+  .si { display:flex; align-items:center; justify-content:space-between; gap:16px; height:68px; padding:0 18px; border-radius:14px; font-size:23px; border:3px solid transparent; cursor:pointer; }
+  .si .v { display:flex; align-items:center; gap:14px; color:var(--txt); }
+  .si .v b { min-width:120px; text-align:center; font-weight:600; }
+  .si .ar { color:var(--dim); font-size:30px; padding:0 8px; }
+  .si.focus { background:var(--hov); }
+  .si.info { color:var(--dim); font-size:19px; height:auto; padding:10px 18px; line-height:1.4; cursor:default; }
+  /* ---- content ---- */
+  #content { position:absolute; left:0; right:0; top:136px; bottom:0; overflow:hidden; background:var(--bg); }
+  #content.start { background:var(--bg); }
+  iframe.site { position:absolute; left:0; top:0; border:0; background:#fff; transform-origin:0 0; visibility:hidden; }
+  iframe.site.act { visibility:visible; }
+  body.full #bar { display:none; } body.full #content { top:0; }
+  /* ---- start page ---- */
+  #start { position:absolute; inset:0; overflow:hidden; padding:34px 70px; display:none; background:var(--bg); }
+  #start.show { display:block; }
+  #sqrow { position:relative; display:flex; width:1180px; margin:6px auto 4px; }
+  #sq { flex:1; height:88px; border-radius:44px; background:var(--card); border:3px solid transparent;
+    color:var(--txt); font-size:32px; padding:0 96px 0 40px; outline:none; }
+  #go2 { right:12px; width:68px; height:64px; border-radius:32px; }
+  #go2 svg { width:34px; height:34px; }
+  #shint { text-align:center; font-size:19px; color:var(--dim); margin-bottom:4px; }
+  h2 { font-size:26px; font-weight:500; color:var(--txt2); margin:22px 0 12px; }
+  .grid { display:grid; grid-template-columns:repeat(5, 1fr); gap:18px; }
+  .tile { height:100px; border-radius:20px; background:var(--card); display:flex; align-items:center; gap:16px; padding:0 18px; border:3px solid transparent; cursor:pointer; min-width:0; }
+  .tile .ic { width:56px; height:56px; border-radius:14px; background:var(--ic); flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:26px; color:var(--dim); }
+  .tile .ic img { width:34px; height:34px; }
+  .tile .t { min-width:0; } .tile .n { font-size:22px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tile .h { font-size:17px; color:var(--dim); margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tile { position:relative; }
+  .tile .tx { position:absolute; right:10px; top:50%; margin-top:-20px; width:40px; height:40px; border-radius:12px; display:none; align-items:center; justify-content:center; font-size:22px; color:var(--txt2); background:var(--txbg); }
+  .tile .tx:hover { background:#e11d2a; color:#fff; }
+  .tile.focus .tx, .tile:hover .tx { display:flex; }
+  .tile.focus .t, .tile:hover .t { padding-right:44px; }
+  .tile.focus, .tile:hover { border-color:var(--foc); background:var(--card2); }
+  .empty { font-size:21px; color:var(--dim); }
+  #keys { position:absolute; left:70px; right:70px; bottom:20px; font-size:19px; color:var(--dim); }
+  #keys .kl { display:flex; gap:26px; flex-wrap:wrap; margin-top:8px; }
+  #keys b { color:var(--txt2); font-weight:600; }
+  .dot { display:inline-block; width:16px; height:16px; border-radius:50%; vertical-align:-2px; margin-right:7px; }
+  #toast { position:absolute; left:50%; top:160px; transform:translateX(-50%); background:var(--pop); color:var(--txt); border:1px solid var(--line); border-radius:22px; padding:18px 30px; font-size:24px; display:none; z-index:20; }
+  #msg { position:absolute; left:0; right:0; top:42%; text-align:center; font-size:28px; color:var(--dim); display:none; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <div id="tabs"></div>
+  <div id="nav">
+    <div class="nb" id="back" data-f="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></div>
+    <div class="nb" id="fwd" data-f="fwd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
+    <div class="nb" id="reload" data-f="reload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></div>
+    <div class="nb" id="home" data-f="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg></div>
+    <div class="fw"><input id="addr" data-f="addr" autocomplete="off" spellcheck="false" placeholder="Пошук або адреса сайту"><div class="gob" id="go1" data-f="go1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div></div>
+    <div class="nb" id="star" data-f="star"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8L3.5 9.7l5.9-.8z"/></svg></div>
+    <div class="nb" id="setb" data-f="set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7.2"/><path d="M12 1.8v3M12 19.2v3M1.8 12h3M19.2 12h3"/></svg></div>
+    <div class="nb" id="fullb" data-f="full"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></div>
+  </div>
+</div>
+<div id="content">
+  <div id="start">
+    <div id="sqrow"><input id="sq" autocomplete="off" spellcheck="false" placeholder="Пошук або адреса сайту"><div class="gob" id="go2" data-f="go2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div></div>
+    <div id="shint">Реклама й трекери блокуються</div>
+    <h2>Закладки</h2><div class="grid" id="g-bm"></div>
+    <h2>Часто відвідувані</h2><div class="grid" id="g-top"></div>
+    <div id="keys">
+      <div class="kl"><b>На сайті:</b>
+        <span><span class="dot" style="background:#e11d2a"></span>панель · двічі — ввести адресу</span>
+        <span><span class="dot" style="background:#22c55e"></span>нова вкладка</span>
+        <span><span class="dot" style="background:#eab308"></span><span class="dot" style="background:#3b82f6"></span>сусідня вкладка</span>
+        <span>Back — назад</span></div>
+      <div class="kl"><b>У панелі:</b>
+        <span>стрілки, OK</span>
+        <span><span class="dot" style="background:#e11d2a"></span>на вкладці — закрити її</span>
+        <span><b>Плитки:</b> ✕ або <span class="dot" style="background:#e11d2a;margin-left:6px"></span>— прибрати (закладку — двічі)</span></div>
+    </div>
+  </div>
+  <div id="msg"></div>
+</div>
+<div id="setbg"></div><div id="setp"></div>
+<div id="toast"></div>
+<!-- interface language: NO synchronous XHR in this app — with framegate's DevTools Fetch interception a sync XHR freezes
+     the page. The TV daemon writes i18n/current.js (window.__curLang); dictionaries are i18n/<lang>.js (window.LANG_DICT). -->
+<script src="i18n/current.js"></script>
+<script>
+  var UILANG=(function(){ var c=window.__curLang; if(c){ try{ localStorage.setItem('uiLang',c); }catch(e){} return c; } try{ return localStorage.getItem('uiLang')||'uk'; }catch(e){ return 'uk'; } })();
+  if(UILANG!=='uk') document.write('<script src="i18n/'+UILANG+'.js"><\/script>');
+</script>
+<script>
+  var DICT=window.LANG_DICT||null;
+  function L(s){ return (DICT && DICT[s]) || s; }
+  (function(){ if(!DICT || !document.body) return; document.documentElement.lang=UILANG;
+    var w=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false), n, list=[];
+    while((n=w.nextNode())) list.push(n);
+    list.forEach(function(t){ var v=t.nodeValue, k=v.replace(/\s+/g,' ').trim(); if(k && DICT[k]) t.nodeValue=v.replace(k, DICT[k]); });
+    [].forEach.call(document.querySelectorAll('[placeholder],[title]'), function(el){ ['placeholder','title'].forEach(function(a){ var v=el.getAttribute(a); if(v && DICT[v.trim()]) el.setAttribute(a, DICT[v.trim()]); }); });
+  })();
+  // language changed while the browser was in the background → reload once when it comes back (async script, no XHR)
+  function langCheck(){ var sc=document.createElement('script'); sc.src='i18n/current.js?'+Date.now();
+    sc.onload=function(){ sc.remove(); var c=window.__curLang; if(c && c!==UILANG){ try{ localStorage.setItem('uiLang',c); }catch(e){} location.reload(); return; } try{ document.dispatchEvent(new Event('myhome-ui')); }catch(e){} };
+    sc.onerror=function(){ sc.remove(); }; document.head.appendChild(sc); }
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) langCheck(); });
+  document.addEventListener('webOSRelaunch', langCheck);
+(function () {
+'use strict';
+// «Браузер» — com.user.browser. Our own browser UI; sites run in <iframe name="tabN"> (Chromium 120 of WebAppMgr).
+// Needs the helper service browser/service/framegate.py (hook 43): it lifts the "no embedding" headers for tab
+// frames, reports navigations/titles (__fgRecv) and relays keys from inside sites; app → service: __fgSend(json).
+var ENGINES = [ { id:'ddg', n:'DuckDuckGo', q:'https://duckduckgo.com/?q=' }, { id:'sp', n:'Startpage', q:'https://www.startpage.com/do/search?q=' },
+                { id:'g', n:'Google', q:'https://www.google.com/search?q=' }, { id:'b', n:'Bing', q:'https://www.bing.com/search?q=' } ];
+var engine = (function () { try { return JSON.parse(localStorage.getItem('br.engine')) || 'ddg'; } catch (e) { return 'ddg'; } })();
+function eng() { for (var i = 0; i < ENGINES.length; i++) if (ENGINES[i].id === engine) return ENGINES[i]; return ENGINES[0]; }
+var SEARCH = eng().q;
+var BAR_H = 136, W = 1920, H = 1080 - BAR_H, MAX_LIVE = 3, COLS = 5;
+function $(id) { return document.getElementById(id); }
+function load(k, d) { try { var v = localStorage.getItem('br.' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+function save(k, v) { try { localStorage.setItem('br.' + k, JSON.stringify(v)); } catch (e) {} }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+function host(u) { var m = /^[a-z]+:\/\/([^\/?#]+)/i.exec(u || ''); return m ? m[1].replace(/^www\./, '') : ''; }
+function fav(u) { var h = host(u); return h ? 'https://icons.duckduckgo.com/ip3/' + h + '.ico' : ''; }
+var toastT;
+function toast(m) { var t = $('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(function () { t.style.display = 'none'; }, 2200); }
+function toUrl(s) {
+  s = (s || '').trim(); if (!s) return null;
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(s)) return s;
+  if (!/\s/.test(s) && /^[^\/?#]+\.[a-z]{2,}(:\d+)?([\/?#].*)?$/i.test(s)) return 'https://' + s;
+  if (/^localhost(:\d+)?(\/.*)?$|^\d{1,3}(\.\d{1,3}){3}(:\d+)?(\/.*)?$/.test(s)) return 'http://' + s;
+  return SEARCH + encodeURIComponent(s);
+}
+function searchTerm(u) {
+  for (var i = 0; i < ENGINES.length; i++) { var q = ENGINES[i].q;
+    if ((u || '').indexOf(q) === 0) { try { return decodeURIComponent(u.slice(q.length).split('&')[0].replace(/\+/g, ' ')); } catch (e) { return null; } } }
+  return null;
+}
+
+// ---- service link ----
+var gate = window.__framegate === 1;
+function send(o) { try { window.__fgSend(JSON.stringify(o)); return true; } catch (e) { return false; } }
+window.addEventListener('framegate', function () { if (!gate) { gate = true; $('msg').style.display = 'none'; if (cur()) showTab(cur().id); } });
+
+// ---- state ----
+var zoom = load('zoom', 1.5);
+// theme: 'hub' (follow the hub: settings category "myhome", key "uiTheme" = dark|light|auto), 'dark', 'light'
+var theme = load('theme', 'hub'), hubTheme = 'dark';
+function isDay() { var h = new Date().getHours(); return h >= 7 && h < 20; }
+function applyTheme() {
+  var t = theme === 'hub' ? hubTheme : theme;
+  if (t === 'auto') t = isDay() ? 'light' : 'dark';
+  document.body.classList.toggle('light', t === 'light');
+}
+function lunaCall(uri, params, cb) {
+  try { var b = new PalmServiceBridge(); b.onservicecallback = function (r) { try { cb && cb(JSON.parse(r)); } catch (e) {} }; b.call(uri, JSON.stringify(params)); window.__lb = b; } catch (e) {}
+}
+// the hub's theme comes from i18n/current.js (written by the TV daemon) — settingsservice denies com.user.* apps
+hubTheme = window.__curTheme || 'dark';
+document.addEventListener('myhome-ui', function () { if (window.__curTheme && window.__curTheme !== hubTheme) { hubTheme = window.__curTheme; applyTheme(); } });
+setInterval(applyTheme, 60000);
+var bm = load('bm', null), hist = load('hist', []);      // hist: {u,t,n,at}
+var tabs = [], act = null, seq = 0;                      // tab: {id,url,title,el,lastUse,load}
+function cur() { for (var i = 0; i < tabs.length; i++) if (tabs[i].id === act) return tabs[i]; return null; }
+function byId(id) { for (var i = 0; i < tabs.length; i++) if (tabs[i].id === id) return tabs[i]; return null; }
+function persist() { save('tabs', { act:act, list:tabs.map(function (t) { return { id:t.id, url:t.url, title:t.title }; }) }); }
+
+function frameFor(t) {
+  if (t.el || !t.url) return;
+  if (!gate) { $('msg').textContent = L('Сервіс браузера ще не готовий — зачекай кілька секунд'); $('msg').style.display = 'block'; return; }
+  var live = tabs.filter(function (x) { return x.el; }).sort(function (a, b) { return a.lastUse - b.lastUse; });
+  while (live.length >= MAX_LIVE) { var old = live.shift(); if (old === t) continue; old.el.remove(); old.el = null; }   // TV memory: ≤3 live sites
+  var f = document.createElement('iframe');
+  f.className = 'site'; f.name = t.id;
+  // '*' = for ANY site this tab navigates to (a bare 'fullscreen' only covers the origin of the first src →
+  // fullscreen broke after following a link to another site)
+  f.setAttribute('allow', 'fullscreen *; autoplay *; encrypted-media *; picture-in-picture *; clipboard-write *');
+  f.setAttribute('allowfullscreen', '');
+  f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-presentation allow-pointer-lock allow-orientation-lock');
+  sizeFrame(f);
+  f.src = t.url; t.el = f; t.load = true; t.depth = 0; t.backPend = false;
+  $('content').appendChild(f);
+}
+function sizeFrame(f) {
+  var full = document.body.classList.contains('full'), h = full ? 1080 : H;
+  f.style.width = Math.round(W / zoom) + 'px'; f.style.height = Math.round(h / zoom) + 'px'; f.style.transform = 'scale(' + zoom + ')';
+}
+function newTab(url, bg) {
+  var t = { id:'tab' + (++seq) + '_' + Date.now().toString(36), url:url || '', title:'', el:null, lastUse:Date.now() };
+  tabs.push(t);
+  if (!bg) showTab(t.id); else { renderTabs(); persist(); }
+  return t;
+}
+function showTab(id) {
+  var t = byId(id); if (!t) return;
+  act = id; t.lastUse = Date.now();
+  frameFor(t);
+  tabs.forEach(function (x) { if (x.el) x.el.classList.toggle('act', x === t); });
+  var start = !t.url;
+  $('start').classList.toggle('show', start); $('content').classList.toggle('start', start);
+  if (start) renderStart();
+  renderTabs(); renderNav(); persist();
+}
+function closeTab(id) {
+  var i = tabs.findIndex(function (x) { return x.id === id; }); if (i < 0) return;
+  var t = tabs[i]; if (t.el) t.el.remove(); tabs.splice(i, 1);
+  if (!tabs.length) { newTab(''); return; }
+  if (act === id) showTab(tabs[Math.min(i, tabs.length - 1)].id); else { renderTabs(); persist(); }
+}
+function go(url, inNew) {
+  if (!url) return;
+  if (!gate) { toast(L('Сервіс браузера не запущений — сайти поки не відкриваються')); send({ cmd:'hello' }); }
+  else toast(L('Відкриваю…'));
+  var t = cur();
+  if (inNew || !t) { newTab(url); return; }
+  if (t.el) { t.el.src = url; t.load = true; } t.url = url; t.title = '';
+  showTab(t.id);
+}
+function goHome() { var t = cur(); if (!t) return; if (t.el) { t.el.remove(); t.el = null; } t.url = ''; t.title = ''; showTab(t.id); focusStart(); }
+
+// ---- events from the service ----
+window.__fgRecv = function (json) {
+  var e; try { e = JSON.parse(json); } catch (x) { return; }
+  var t = byId(e.tab);
+  if (e.ev === 'nav' && t) {
+    if (!/^https?:/.test(e.url)) return;
+    if (host(t.url) !== host(e.url)) t.title = '';
+    // depth = pages this tab's frame can go back through (Back on the first page leaves the browser)
+    if (t.backPend) { t.backPend = false; clearTimeout(t.backTm); t.depth = Math.max(1, (t.depth || 1) - 1); }
+    else if (!t.depth || e.url !== t.url) t.depth = (t.depth || 0) + 1;
+    t.url = e.url; t.load = false;
+    record(t); renderTabs(); if (t.id === act) renderNav(); persist();
+    send({ cmd:'title', tab:t.id });
+  } else if (e.ev === 'title' && t) {
+    t.title = e.title || ''; record(t, true); renderTabs(); persist();
+  } else if (e.ev === 'open') {
+    newTab(e.url); setFz('site'); toast(L('Нова вкладка'));
+  } else if (e.ev === 'key') {
+    siteKey(e.key);
+  }
+};
+function record(t, titleOnly) {
+  if (!t.url || !/^https?:/.test(t.url)) return;
+  var h = hist.find(function (x) { return x.u === t.url; });
+  if (titleOnly) { if (h && t.title) { h.t = t.title; save('hist', hist); } return; }
+  if (h) { h.n++; h.at = Date.now(); if (t.title) h.t = t.title; } else hist.unshift({ u:t.url, t:t.title, n:1, at:Date.now() });
+  if (hist.length > 300) { hist.sort(function (a, b) { return b.at - a.at; }); hist.length = 300; }
+  save('hist', hist);
+}
+
+// ---- rendering ----
+function tabTitle(t) { if (!t.url) return L('Нова вкладка'); var s = searchTerm(t.url); return t.title || (s ? '🔍 ' + s : host(t.url) || t.url); }
+function renderTabs() {
+  var h = '';
+  tabs.forEach(function (t, i) {
+    var f = t.url ? '<img src="' + esc(fav(t.url)) + '" onerror="this.parentNode.textContent=\'•\'">' : '＋';
+    h += '<div class="tab' + (t.id === act ? ' act' : '') + (t.load && t.el ? ' load' : '') + '" data-f="tab" data-i="' + i + '"><span class="fi">' + f +
+         '</span><span class="tt">' + esc(tabTitle(t)) + '</span><span class="x" data-x="' + i + '">✕</span></div>';
+  });
+  h += '<div id="newtab" data-f="new">＋</div>';
+  $('tabs').innerHTML = h; markFocus();
+}
+function renderNav() {
+  var t = cur(), u = t && t.url || '';
+  if (document.activeElement !== $('addr')) $('addr').value = u ? (searchTerm(u) || u) : '';
+  $('star').classList.toggle('on', !!(u && bm.some(function (b) { return b.u === u; })));
+  ['back', 'fwd', 'reload', 'star'].forEach(function (id) { $(id).classList.toggle('off', !u); });
+}
+function tile(it, k, i) {
+  var h = host(it.u), s = searchTerm(it.u), letter = esc((h[0] || '?').toUpperCase());
+  return '<div class="tile" data-f="tile" data-k="' + k + '" data-i="' + i + '"><span class="tx" data-tx="1">✕</span><div class="ic">' + (s ? '🔍' : '<img src="' + esc(fav(it.u)) + '" onerror="this.parentNode.textContent=\'' + letter + '\'">') +
+    '</div><div class="t"><div class="n">' + esc(s || it.t || h) + '</div><div class="h">' + esc(s ? L('пошук') : h) + '</div></div></div>';
+}
+var lists = { bm:[], top:[] };
+function renderStart() {
+  lists.bm = bm.slice();
+  lists.top = hist.filter(function (x) { return !searchTerm(x.u); }).slice().sort(function (a, b) { return (b.n - a.n) || (b.at - a.at); }).slice(0, 10);
+  $('g-bm').innerHTML = lists.bm.length ? lists.bm.map(function (x, i) { return tile(x, 'bm', i); }).join('') : L('<div class="empty">Порожньо — ☆ у панелі додає поточний сайт</div>');
+  $('g-top').innerHTML = lists.top.length ? lists.top.map(function (x, i) { return tile(x, 'top', i); }).join('') : L('<div class="empty">Тут зʼявляться сайти, які ти відкриваєш найчастіше</div>');
+  markFocus();
+}
+
+// ---- focus model: bar (tabs row / nav row) · start page · site ----
+// fz = {z:'tabs'|'nav'|'start'|'site', i}  — 'site' means the iframe has focus (its keys come via the service)
+var fz = { z:'start', i:0 };
+function navItems() { return Array.prototype.slice.call(document.querySelectorAll('#nav [data-f]')); }
+function tabItems() { return Array.prototype.slice.call(document.querySelectorAll('#tabs [data-f]')); }
+function startItems() { return [$('sq'), $('go2')].concat(Array.prototype.slice.call(document.querySelectorAll('#start .tile'))); }
+var T0 = 2;   // index of the first tile in startItems()
+function markFocus() {
+  Array.prototype.forEach.call(document.querySelectorAll('.focus'), function (e) { e.classList.remove('focus'); });
+  var el = null;
+  if (fz.z === 'tabs') el = tabItems()[fz.i]; else if (fz.z === 'nav') el = navItems()[fz.i]; else if (fz.z === 'start') el = startItems()[fz.i];
+  if (el) el.classList.add('focus');
+}
+function setFz(z, i) {
+  fz = { z:z, i:i || 0 };
+  if (z === 'site') { var t = cur(); if (t && t.el) { try { t.el.focus(); } catch (e) {} } else { fz = { z:'start', i:0 }; } }
+  else if (document.activeElement && document.activeElement.tagName === 'IFRAME') document.activeElement.blur();
+  markFocus();
+}
+function focusStart() { setFz('start', 0); }
+function focusBar() { setFz('nav', navItems().indexOf($('addr'))); }
+
+function act1(el) {
+  if (!el) return;
+  var f = el.getAttribute('data-f'), t = cur();
+  if (f === 'tab') showTab(tabs[+el.getAttribute('data-i')].id);
+  else if (f === 'new') { newTab(''); focusStart(); }
+  else if (f === 'back' && t && t.url) send({ cmd:'back', tab:t.id });
+  else if (f === 'fwd' && t && t.url) send({ cmd:'forward', tab:t.id });
+  else if (f === 'reload' && t && t.url) { if (!send({ cmd:'reload', tab:t.id }) && t.el) t.el.src = t.url; t.load = true; renderTabs(); }
+  else if (f === 'home') goHome();
+  else if (f === 'addr') $('addr').focus();
+  else if (f === 'star') toggleBm(t);
+  else if (f === 'go1') submit($('addr'));
+  else if (f === 'go2') submit($('sq'));
+  else if (f === 'set') openSet();
+  else if (f === 'full') { document.body.classList.toggle('full'); tabs.forEach(function (x) { if (x.el) sizeFrame(x.el); }); if (t && t.url) setFz('site'); toast(document.body.classList.contains('full') ? L('Повний екран · 🔴 — панель') : L('Панель')); }
+  else if (f === 'tile') { var L = lists[el.getAttribute('data-k')][+el.getAttribute('data-i')]; if (L) { go(L.u); setFz('site'); } }
+}
+function toggleBm(t) {
+  if (!t || !t.url) return;
+  var k = bm.findIndex(function (b) { return b.u === t.url; });
+  if (k >= 0) { bm.splice(k, 1); toast(L('Прибрано із закладок')); } else { bm.push({ u:t.url, t:t.title || host(t.url) }); toast(L('Додано в закладки')); }
+  save('bm', bm); renderNav();
+}
+function siteKey(k) {
+  var t = cur();
+  if (k === 'red' && redTwice()) { editAddr(); }
+  else if (k === 'red') {
+    if (document.body.classList.contains('full')) { document.body.classList.remove('full'); tabs.forEach(function (x) { if (x.el) sizeFrame(x.el); }); }
+    focusBar(); var b = $('bar'); b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash');
+  }
+  else if (k === 'green') { newTab(''); focusStart(); }
+  else if (k === 'yellow' || k === 'blue') { var i = tabs.indexOf(t), n = tabs.length; if (n > 1) { showTab(tabs[(i + (k === 'blue' ? 1 : n - 1)) % n].id); if (cur().url) setFz('site'); else focusStart(); } }
+  else if (k === 'back') {
+    if (!t || (t.depth || 0) <= 1) { goHome(); return; }   // first page of the site → our start page
+    t.backPend = true; send({ cmd:'back', tab:t.id });
+    clearTimeout(t.backTm); t.backTm = setTimeout(function () { if (t.backPend) { t.backPend = false; t.depth = 1; } }, 3000);   // nothing happened: next Back leaves
+  }
+}
+
+var K = { LEFT:37, UP:38, RIGHT:39, DOWN:40, OK:13, BACK:461, ESC:27, RED:403, GREEN:404, YELLOW:405, BLUE:406 };
+document.addEventListener('keydown', function (e) {
+  var k = e.keyCode, a = document.activeElement, h = true;
+  if (setOpen) { setKey(e); return; }
+  if (a === $('addr') || a === $('sq')) {
+    if (k === 13) submit(a);
+    else if (k === K.BACK || k === K.ESC) { a.blur(); renderNav(); markFocus(); }
+    else if (k === K.DOWN && a === $('addr')) { a.blur(); renderNav(); var t0 = cur(); if (t0 && t0.url) setFz('site'); else focusStart(); }
+    else if (k === K.DOWN && a === $('sq')) { a.blur(); setFz('start', startItems().length > T0 ? T0 : 0); }
+    else if (k === K.UP && a === $('sq')) { a.blur(); focusBar(); }
+    else if (k === K.RIGHT && a.value && a.selectionStart === a.value.length) { a.blur(); if (a === $('addr')) setFz('nav', navItems().indexOf($('go1'))); else setFz('start', 1); }
+    else h = false;
+    if (h) { e.preventDefault(); e.stopPropagation(); } return;
+  }
+  if (k === K.GREEN) { siteKey('green'); }
+  else if (k === K.YELLOW || k === K.BLUE) { siteKey(k === K.BLUE ? 'blue' : 'yellow'); }
+  else if (fz.z === 'tabs') {
+    var ti = tabItems();
+    if (k === K.LEFT) setFz('tabs', (fz.i - 1 + ti.length) % ti.length);          // по колу, як у хабі
+    else if (k === K.RIGHT) setFz('tabs', (fz.i + 1) % ti.length);
+    else if (k === K.DOWN) focusBar();
+    else if (k === K.OK) { var wasNew = ti[fz.i] && ti[fz.i].getAttribute('data-f') === 'new'; act1(ti[fz.i]); if (!wasNew) setFz('tabs', tabs.indexOf(cur())); }
+    else if (k === K.RED && ti[fz.i] && ti[fz.i].getAttribute('data-f') === 'tab') { closeTab(tabs[fz.i].id); setFz('tabs', Math.min(fz.i, tabs.length - 1)); }
+    else if (k === K.BACK || k === K.ESC) backFromBar();
+    else h = false;
+  } else if (fz.z === 'nav') {
+    var ni = navItems();
+    if (k === K.LEFT) setFz('nav', (fz.i - 1 + ni.length) % ni.length);
+    else if (k === K.RIGHT) setFz('nav', (fz.i + 1) % ni.length);
+    else if (k === K.UP) setFz('tabs', Math.max(0, tabs.indexOf(cur())));
+    else if (k === K.DOWN) { var t1 = cur(); if (t1 && t1.url) setFz('site'); else focusStart(); }
+    else if (k === K.OK) act1(ni[fz.i]);
+    else if (k === K.RED) { if (redTwice()) editAddr(); else backFromBar(); }
+    else if (k === K.BACK || k === K.ESC) backFromBar();
+    else h = false;
+  } else if (fz.z === 'start') {
+    var si = startItems(), i = fz.i;
+    if (i < T0) {
+      if (k === K.OK) { if (i === 0) $('sq').focus(); else submit($('sq')); }
+      else if (k === K.RIGHT && i === 0) setFz('start', 1);
+      else if (k === K.LEFT && i === 1) setFz('start', 0);
+      else if (k === K.DOWN) { if (si.length > T0) setFz('start', T0); }
+      else if (k === K.UP || k === K.RED) focusBar();
+      else if (k === K.BACK || k === K.ESC) exitApp();
+      else h = false;
+    } else {
+      var el = si[i], kk = el.getAttribute('data-k'), idx = +el.getAttribute('data-i'), L = lists[kk];
+      var go2 = function (k2, j) { setFz('start', T0 + (k2 === 'top' ? lists.bm.length : 0) + j); };
+      if (k === K.LEFT) { if (idx % COLS) go2(kk, idx - 1); }
+      else if (k === K.RIGHT) { if (idx + 1 < L.length && (idx + 1) % COLS) go2(kk, idx + 1); }
+      else if (k === K.UP) { if (idx >= COLS) go2(kk, idx - COLS); else if (kk === 'top' && lists.bm.length) go2('bm', Math.min(lists.bm.length - 1, Math.floor((lists.bm.length - 1) / COLS) * COLS + idx % COLS)); else setFz('start', 0); }
+      else if (k === K.DOWN) { if (idx + COLS < L.length) go2(kk, idx + COLS); else if (Math.floor(idx / COLS) < Math.floor((L.length - 1) / COLS)) go2(kk, L.length - 1); else if (kk === 'bm' && lists.top.length) go2('top', Math.min(lists.top.length - 1, idx % COLS)); }
+      else if (k === K.OK) act1(el);
+      else if (k === K.RED) removeTile(kk, idx);
+      else if (k === K.BACK || k === K.ESC) setFz('start', 0);
+      else h = false;
+    }
+  } else if (fz.z === 'site') {
+    // the app document has focus although a site is shown (e.g. after a click on the bar): arrows/🔴 bring the bar
+    if ((k >= 37 && k <= 40) || k === K.RED) focusBar();
+    else if (k === K.BACK || k === K.ESC) siteKey('back');
+    else h = false;
+  } else h = false;
+  if (h) { e.preventDefault(); e.stopPropagation(); }
+}, true);
+var bmArm = { u:null, t:0 };
+function removeTile(kk, idx) {
+  var L = lists[kk]; if (!L || !L[idx]) return;
+  var u = L[idx].u;
+  if (kk === 'bm' && !(bmArm.u === u && Date.now() - bmArm.t < 3000)) { bmArm = { u:u, t:Date.now() }; toast(L('Ще раз — прибрати закладку')); return; }
+  bmArm = { u:null, t:0 };
+  if (kk === 'bm') { bm = bm.filter(function (x) { return x.u !== u; }); save('bm', bm); }
+  else { hist = hist.filter(function (x) { return x.u !== u; }); save('hist', hist); }
+  var i = fz.i; renderStart();
+  var n = startItems().length; setFz('start', n > T0 ? Math.max(T0, Math.min(i, n - 1)) : 0);
+  toast(L('Прибрано'));
+}
+function submit(a) {
+  var u = toUrl(a.value); a.blur();
+  if (!u) { a.focus(); return; }
+  go(u); a.value = ''; setFz('site');
+}
+
+// ---- settings (⚙) ----
+var setOpen = false, setI = 0, clearArm = 0;
+var ZOOMS = [1, 1.1, 1.25, 1.5, 1.75, 2, 2.5];
+function setItems() {
+  return [
+    { id:'zoom', n:L('Масштаб сторінок'), v:Math.round(zoom * 100) + '%', ar:1 },
+    { id:'eng', n:L('Пошук'), v:eng().n, ar:1 },
+    { id:'theme', n:L('Тема'), v:({ hub:L('Як у хабі'), dark:L('Темна'), light:L('Світла') })[theme], ar:1 },
+    { id:'clear', n:L('Очистити історію'), v:clearArm && Date.now() - clearArm < 3000 ? L('ще раз OK') : '' },
+    { id:'info', info:1, n:L('Розширення з Chrome Web Store тут не встановити: рушій телевізора (WebAppMgr) не підтримує розширень. Блокування реклами вже працює на весь ТВ; свої скрипти для сайтів можна додати окремо.') }
+  ];
+}
+function renderSet() {
+  var h = L('<h3>Налаштування браузера</h3>');
+  setItems().forEach(function (it, i) {
+    if (it.info) { h += '<div class="si info">' + esc(it.n) + '</div>'; return; }
+    h += '<div class="si' + (i === setI ? ' focus' : '') + '" data-si="' + i + '"><span>' + esc(it.n) + '</span><span class="v">' +
+      (it.ar ? '<span class="ar" data-d="-1">‹</span><b>' + esc(it.v) + '</b><span class="ar" data-d="1">›</span>' : '<b>' + esc(it.v) + '</b>') + '</span></div>';
+  });
+  $('setp').innerHTML = h;
+}
+function openSet() { setOpen = true; setI = 0; $('setp').classList.add('show'); $('setbg').classList.add('show'); renderSet(); }
+function closeSet() { setOpen = false; $('setp').classList.remove('show'); $('setbg').classList.remove('show'); markFocus(); }
+function setChange(i, d) {
+  var it = setItems()[i]; if (!it) return;
+  if (it.id === 'zoom') { var z = ZOOMS.indexOf(zoom); if (z < 0) z = 3; zoom = ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, z + d))]; save('zoom', zoom); tabs.forEach(function (x) { if (x.el) sizeFrame(x.el); }); }
+  else if (it.id === 'theme') { var TH = ['hub', 'dark', 'light']; theme = TH[(TH.indexOf(theme) + d + TH.length) % TH.length]; save('theme', theme); applyTheme(); }
+  else if (it.id === 'eng') { var e = ENGINES.indexOf(eng()); engine = ENGINES[(e + d + ENGINES.length) % ENGINES.length].id; save('engine', engine); SEARCH = eng().q; }
+  renderSet();
+}
+function setActivate(i) {
+  var it = setItems()[i]; if (!it) return;
+  if (it.id === 'clear') {
+    if (clearArm && Date.now() - clearArm < 3000) { hist = []; save('hist', hist); clearArm = 0; toast(L('Історію очищено')); if (cur() && !cur().url) renderStart(); }
+    else clearArm = Date.now();
+    renderSet();
+  } else setChange(i, 1);
+}
+function setKey(e) {
+  var k = e.keyCode, n = setItems().filter(function (x) { return !x.info; }).length;
+  if (k === K.OK && ptrOn()) { if (ptrOver && ptrOver.closest && ptrOver.closest('#setp')) return; closeSet(); e.preventDefault(); e.stopPropagation(); return; }
+  if (k >= 37 && k <= 40) navAt = Date.now();
+  if (k === K.UP) setI = Math.max(0, setI - 1);
+  else if (k === K.DOWN) setI = Math.min(n - 1, setI + 1);
+  else if (k === K.LEFT) setChange(setI, -1);
+  else if (k === K.RIGHT) setChange(setI, 1);
+  else if (k === K.OK) setActivate(setI);
+  else if (k === K.BACK || k === K.ESC || k === K.RED) { closeSet(); e.preventDefault(); e.stopPropagation(); return; }
+  renderSet(); e.preventDefault(); e.stopPropagation();
+}
+$('setp').addEventListener('click', function (e) {
+  var r = e.target.closest('[data-si]'); if (!r) return; var i = +r.getAttribute('data-si'); setI = i;
+  var d = e.target.closest('[data-d]'); if (d) setChange(i, +d.getAttribute('data-d')); else setActivate(i);
+});
+document.addEventListener('mousedown', function (e) { if (setOpen && !e.target.closest('#setp') && !e.target.closest('#setb')) closeSet(); }, true);
+// pointer state: the Magic Remote cursor is on screen and was moved after the last arrow key
+var ptrVis = false, ptrAt = 0, navAt = 0, ptrOver = null;
+function ptrOn() { return ptrVis && ptrAt > navAt; }
+document.addEventListener('cursorStateChange', function (e) { ptrVis = !!(e && e.detail && e.detail.visibility); }, true);
+document.addEventListener('mousemove', function (e) { ptrVis = true; ptrAt = Date.now(); ptrOver = e.target; }, true);
+document.addEventListener('mouseover', function (e) { ptrOver = e.target; }, true);   // also fires for the site frame element itself
+// hover highlights the row under the cursor (classes only: re-rendering would swallow the click)
+$('setp').addEventListener('mouseover', function (e) {
+  var r = e.target.closest && e.target.closest('[data-si]'); if (!r) return; setI = +r.getAttribute('data-si');
+  [].forEach.call($('setp').querySelectorAll('[data-si]'), function (x) { x.classList.toggle('focus', x === r); });
+});
+
+// 🔴 twice quickly (from a site or in the panel): keyboard in the address field, text selected
+var redAt = 0;
+function redTwice() { var now = Date.now(), two = now - redAt < 700; redAt = two ? 0 : now; return two; }
+function editAddr() {
+  if (document.body.classList.contains('full')) { document.body.classList.remove('full'); tabs.forEach(function (x) { if (x.el) sizeFrame(x.el); }); }
+  setFz('nav', navItems().indexOf($('addr'))); var a = $('addr'); a.focus(); setTimeout(function () { try { a.select(); } catch (e) {} }, 30);
+}
+function backFromBar() { var t = cur(); if (t && t.url) setFz('site'); else focusStart(); }
+function exitApp() { try { if (window.webOSSystem && webOSSystem.platformBack) return webOSSystem.platformBack(); } catch (e) {} }   // start page: LG's exit question (restyled by our hook 37)
+
+// ---- pointer ----
+document.addEventListener('click', function (e) {
+  var x = e.target.closest && e.target.closest('[data-x]');
+  if (x) { closeTab(tabs[+x.getAttribute('data-x')].id); return; }
+  if (e.target.closest && e.target.closest('#setp')) return;
+  var tx = e.target.closest && e.target.closest('[data-tx]');
+  if (tx) { var tl = tx.closest('.tile'); fz = { z:'start', i:startItems().indexOf(tl) }; removeTile(tl.getAttribute('data-k'), +tl.getAttribute('data-i')); return; }
+  var el = e.target.closest && e.target.closest('[data-f]');
+  if (!el) return;
+  var all = tabItems(), n = navItems(), s = startItems();
+  if (all.indexOf(el) >= 0) fz = { z:'tabs', i:all.indexOf(el) }; else if (n.indexOf(el) >= 0) fz = { z:'nav', i:n.indexOf(el) }; else if (s.indexOf(el) >= 0) fz = { z:'start', i:s.indexOf(el) };
+  act1(el); markFocus();
+});
+// fallback: some IME paths deliver «Готово» (Enter) only as keyup/keypress
+['keyup', 'keypress'].forEach(function (t) { document.addEventListener(t, function (e) {
+  var a = document.activeElement; if ((e.keyCode === 13 || e.which === 13) && (a === $('addr') || a === $('sq')) && a.value.trim()) { e.preventDefault(); submit(a); }
+}, true); });
+var lastKeyAt = 0, mx = -1, my = -1, moved = 0;
+document.addEventListener('mousemove', function (e) { if (mx >= 0) moved += Math.abs(e.clientX - mx) + Math.abs(e.clientY - my); mx = e.clientX; my = e.clientY; }, true);
+window.__kl = [];
+document.addEventListener('keydown', function (e) { lastKeyAt = Date.now(); moved = 0; __kl.push(e.keyCode + '@' + fz.z + fz.i); if (__kl.length > 40) __kl.shift(); }, true);
+document.addEventListener('mouseover', function (e) {
+  if (Date.now() - lastKeyAt < 1500 && moved < 40) return;   // a lying remote's pointer jitters: don't steal the arrow focus
+  var el = e.target.closest && e.target.closest('[data-f]'); if (!el) return;
+  var all = tabItems(), n = navItems(), s = startItems();
+  if (all.indexOf(el) >= 0) fz = { z:'tabs', i:all.indexOf(el) }; else if (n.indexOf(el) >= 0) fz = { z:'nav', i:n.indexOf(el) }; else if (s.indexOf(el) >= 0) fz = { z:'start', i:s.indexOf(el) };
+  markFocus();
+});
+window.addEventListener('blur', function () { setTimeout(function () { if (document.activeElement && document.activeElement.tagName === 'IFRAME') { fz = { z:'site', i:0 }; markFocus(); } }, 0); });
+$('addr').addEventListener('focus', function () { try { $('addr').select(); } catch (e) {} fz = { z:'nav', i:navItems().indexOf($('addr')) }; markFocus(); });
+$('sq').addEventListener('focus', function () { fz = { z:'start', i:0 }; markFocus(); });
+
+// ---- start: restore tabs, LG bookmarks on first run, launch params ----
+function params() { try { return JSON.parse((window.PalmSystem && PalmSystem.launchParams) || '{}') || {}; } catch (e) { return {}; } }
+function handle(p) {
+  var u = p && (p.url || (p.q && toUrl(p.q))); if (!u) return;
+  go(u, !!(cur() && cur().url)); setFz('site');
+}
+document.addEventListener('webOSRelaunch', function (e) { var c = cur(); if (c) { showTab(c.id); if (c.url) setFz('site'); else focusStart(); } handle((e && e.detail && typeof e.detail === 'object') ? e.detail : params()); });
+function start() {
+  applyTheme();
+  var st = load('tabs', null);
+  if (st && st.list && st.list.length) {
+    st.list.forEach(function (x) { tabs.push({ id:x.id, url:x.url, title:x.title, el:null, lastUse:0 }); var n = parseInt(String(x.id).slice(3), 10); if (n > seq) seq = n; });
+    showTab(byId(st.act) ? st.act : tabs[0].id);
+  } else newTab('');
+  var c = cur(); if (c && c.url) setFz('site'); else focusStart();
+  handle(params());
+  if (!gate) setTimeout(function () { if (!gate) send({ cmd:'hello' }); }, 1500);
+}
+if (bm) start();
+else {
+  var s = document.createElement('script'); s.src = 'lgbookmarks.js';      // written once at install (LG's bookmarks)
+  s.onload = s.onerror = function () {
+    bm = (window.LG_BOOKMARKS || []).concat([{ u:'https://duckduckgo.com/', t:'DuckDuckGo' }, { u:'https://uk.wikipedia.org/', t:L('Вікіпедія') }])
+      .filter(function (b, i, a) { return b.u && a.findIndex(function (x) { return x.u === b.u; }) === i; });
+    save('bm', bm); start();
+  };
+  document.head.appendChild(s);
+}
+})();
+</script>
+</body>
+</html>

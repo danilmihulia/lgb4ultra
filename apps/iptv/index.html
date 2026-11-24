@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Канали</title>
+<style>
+  :root { --bg:#070708; --card:#141418; --card2:#1c1c22; --line:#26262e; --txt:#f2f2f5; --dim:#8a8a96; --acc:#2563eb; --red:#e11d2a; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { width:1920px; height:1080px; overflow:hidden; background:var(--bg); color:var(--txt);
+    font-family:"LG Smart UI","Museo Sans",Roboto,Arial,sans-serif; }
+  #app { position:absolute; inset:0; display:flex; flex-direction:column; padding:44px 56px 0; }
+  header { display:flex; align-items:center; height:84px; gap:28px; }
+  header h1 { font-size:44px; font-weight:600; letter-spacing:.5px; }
+  header .sub { font-size:24px; color:var(--dim); flex:1; }
+  #clock { font-size:40px; font-weight:300; }
+  #search { width:460px; height:64px; border-radius:32px; background:var(--card); border:3px solid transparent;
+    color:var(--txt); font-size:26px; padding:0 28px; outline:none; }
+  #search.focus { border-color:#fff; }
+  main { flex:1; display:flex; gap:36px; min-height:0; margin-top:18px; }
+  #side { width:360px; display:flex; flex-direction:column; gap:10px; overflow:hidden; padding:6px 4px; }
+  .cat { height:72px; border-radius:20px; background:var(--card); display:flex; align-items:center; padding:0 26px;
+    font-size:27px; border:3px solid transparent; flex-shrink:0; cursor:pointer; }
+  .cat .n { margin-left:auto; color:var(--dim); font-size:22px; }
+  .cat.sel { background:var(--card2); }
+  .cat.focus { border-color:#fff; background:var(--card2); }
+  .cat.sep { margin-top:14px; }
+  #gridwrap { flex:1; overflow:hidden; position:relative; }
+  #grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:20px; padding:6px 6px 60px; }
+  .ch { height:128px; border-radius:22px; background:var(--card); display:flex; align-items:center; gap:20px;
+    padding:0 20px; border:3px solid transparent; cursor:pointer; position:relative; overflow:hidden; }
+  .ch.focus { border-color:#fff; background:var(--card2); transform:scale(1.03); }
+  .ch .logo { width:92px; height:92px; border-radius:16px; background:#0d0d10; flex-shrink:0; display:flex;
+    align-items:center; justify-content:center; overflow:hidden; font-size:34px; color:var(--dim); }
+  .ch .logo img { max-width:84px; max-height:84px; }
+  .ch .t { min-width:0; }
+  .ch .name { font-size:25px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ch .meta { font-size:19px; color:var(--dim); margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ch .num { position:absolute; top:10px; right:16px; font-size:18px; color:var(--dim); }
+  .ch .fav { position:absolute; bottom:10px; right:16px; color:#ffd24a; font-size:22px; }
+  .ch.dead { opacity:.45; }
+  #empty { font-size:28px; color:var(--dim); padding:40px 10px; display:none; }
+  #hint { height:64px; display:flex; align-items:center; gap:34px; font-size:21px; color:var(--dim); }
+  .dot { display:inline-block; width:18px; height:18px; border-radius:50%; vertical-align:-2px; margin-right:8px; }
+  /* player */
+  #player { position:absolute; inset:0; background:#000; display:none; }
+  #player.show { display:block; }
+  #video { width:100%; height:100%; background:#000; }
+  #osd { position:absolute; left:60px; right:60px; bottom:56px; height:150px; border-radius:28px; background:rgba(14,14,18,.92);
+    display:flex; align-items:center; gap:30px; padding:0 36px; transition:opacity .3s; }
+  #osd.hide { opacity:0; }
+  #osd .logo { width:104px; height:104px; border-radius:18px; background:#0d0d10; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  #osd .logo img { max-width:96px; max-height:96px; }
+  #osd .num { font-size:46px; font-weight:300; color:var(--dim); min-width:90px; }
+  #osd .name { font-size:38px; }
+  #osd .meta { font-size:23px; color:var(--dim); margin-top:8px; }
+  #osd .state { margin-left:auto; font-size:24px; color:var(--dim); text-align:right; }
+  .ch .now { font-size:19px; color:#c7c7d1; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ch .bar { position:absolute; left:0; bottom:0; height:4px; background:var(--acc); }
+  #osd .prog { font-size:23px; color:#d8d8e0; margin-top:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:1100px; }
+  #osd .pbar { height:5px; background:#2a2a33; border-radius:3px; margin-top:10px; width:520px; overflow:hidden; }
+  #osd .pbar div { height:100%; background:var(--acc); }
+  #prog { position:absolute; top:0; right:0; bottom:0; width:720px; background:rgba(10,10,14,.95); padding:56px 44px; display:none; overflow:hidden; }
+  #prog.show { display:block; }
+  #prog h2 { font-size:32px; font-weight:500; margin-bottom:6px; }
+  #prog .sub { font-size:21px; color:var(--dim); margin-bottom:22px; }
+  .pi { padding:16px 0; border-bottom:1px solid #22222a; }
+  .pi .tm { font-size:22px; color:var(--dim); }
+  .pi .tt { font-size:27px; margin-top:4px; }
+  .pi .ds { font-size:20px; color:#a3a3ad; margin-top:6px; max-height:56px; overflow:hidden; }
+  .pi.cur .tt { color:#fff; } .pi.cur .tm { color:#60a5fa; }
+  #numin { position:absolute; top:50px; right:70px; font-size:72px; font-weight:300; background:rgba(14,14,18,.9);
+    border-radius:22px; padding:10px 34px; display:none; }
+  /* modal (sources) */
+  #modal { position:absolute; inset:0; background:rgba(0,0,0,.7); display:none; align-items:center; justify-content:center; }
+  #modal.show { display:flex; }
+  #mbox { width:900px; max-height:900px; overflow:hidden; background:var(--card); border-radius:30px; padding:36px; }
+  #mbox h2 { font-size:34px; font-weight:500; margin-bottom:8px; }
+  #mbox .sub { font-size:21px; color:var(--dim); margin-bottom:22px; }
+  .mi { height:70px; border-radius:18px; background:var(--card2); display:flex; align-items:center; padding:0 24px;
+    font-size:26px; margin-top:10px; border:3px solid transparent; cursor:pointer; }
+  .mi .r { margin-left:auto; color:var(--dim); font-size:22px; }
+  .mi.focus { border-color:#fff; }
+  .mi.on .r { color:#4ade80; }
+  #toast { position:absolute; left:50%; top:60px; transform:translateX(-50%); background:rgba(20,20,26,.96); border-radius:24px;
+    padding:20px 34px; font-size:26px; display:none; z-index:20; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Канали</h1><div class="sub" id="sub"></div>
+    <input id="search" placeholder="Пошук каналу" autocomplete="off">
+    <div id="clock"></div>
+  </header>
+  <main>
+    <div id="side"></div>
+    <div id="gridwrap"><div id="grid"></div><div id="empty"></div></div>
+  </main>
+  <div id="hint">
+    <span>OK — дивитися · ▶ на каналі — програма</span>
+    <span><span class="dot" style="background:#e11d2a"></span>обране</span>
+    <span><span class="dot" style="background:#22c55e"></span>пошук</span>
+    <span><span class="dot" style="background:#eab308"></span>оновити списки</span>
+    <span><span class="dot" style="background:#3b82f6"></span>джерела</span>
+  </div>
+</div>
+<div id="player"><video id="video" autoplay playsinline></video>
+  <div id="osd"><div class="logo"></div><div class="num"></div><div><div class="name"></div><div class="meta"></div><div class="prog"></div><div class="pbar"><div></div></div></div><div class="state"></div></div>
+  <div id="numin"></div>
+  <div id="prog"></div>
+</div>
+<div id="modal"><div id="mbox"></div></div>
+<div id="toast"></div>
+<script>
+  // ---- interface language (chosen in the hub: settings category "myhome", key "uiLang"). Dictionary keys = Ukrainian text;
+  // L(s) = translation or s. Translations: i18n/<lang>.json next to this page (source: i18n/<app>/ in the project).
+  // our apps may NOT read settings (settingsservice → Access denied for com.user.*), so a root daemon on the TV
+  // (deploy/poweron/poweron-home.sh) writes the hub's choice into i18n/current.json next to each app
+  function curLang(){ try{ var x=new XMLHttpRequest(); x.open('GET','i18n/current.json',false); x.send(); return (JSON.parse(x.responseText)||{}).lang||null; }catch(e){ return null; } }
+  var UILANG=(function(){ var c=curLang(); if(c){ try{ localStorage.setItem('uiLang',c); }catch(e){} return c; } try{ return localStorage.getItem('uiLang')||'uk'; }catch(e){ return 'uk'; } })(), DICT=null;
+  if(UILANG!=='uk'){ try{ var lx=new XMLHttpRequest(); lx.open('GET','i18n/'+UILANG+'.json',false); lx.send(); if(lx.responseText) DICT=JSON.parse(lx.responseText); }catch(e){ DICT=null; } }
+  function L(s){ return (DICT && DICT[s]) || s; }
+  (function(){ if(!DICT || !document.body) return; document.documentElement.lang=UILANG;
+    var w=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false), n, list=[];
+    while((n=w.nextNode())) list.push(n);
+    list.forEach(function(t){ var v=t.nodeValue, k=v.replace(/\s+/g,' ').trim(); if(k && DICT[k]) t.nodeValue=v.replace(k, DICT[k]); });
+    [].forEach.call(document.querySelectorAll('[placeholder],[title]'), function(el){ ['placeholder','title'].forEach(function(a){ var v=el.getAttribute(a); if(v && DICT[v.trim()]) el.setAttribute(a, DICT[v.trim()]); }); });
+  })();
+  // language changed while this app was in the background → reload once when it comes back
+  function langCheck(){ var c=curLang(); if(c && c!==UILANG){ try{ localStorage.setItem('uiLang',c); }catch(e){} location.reload(); } }
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) langCheck(); });
+  document.addEventListener('webOSRelaunch', langCheck);
+(function () {
+'use strict';
+var BASE = 'https://iptv-org.github.io/iptv/';
+// built-in sources = free public lists from the open iptv-org catalogue (user: UA, BE, CN "for fun", English)
+var BUILTIN = [
+  { id:'ua', name:L('Україна'), url:BASE+'countries/ua.m3u', on:true },
+  { id:'be', name:L('Бельгія'), url:BASE+'countries/be.m3u', on:true },
+  { id:'uk', name:L('Велика Британія'), url:BASE+'countries/uk.m3u', on:true },
+  { id:'us', name:L('США'), url:BASE+'countries/us.m3u', on:true },
+  { id:'cn', name:L('Китай'), url:BASE+'countries/cn.m3u', on:true },
+  { id:'pl', name:L('Польща'), url:BASE+'countries/pl.m3u', on:false },
+  { id:'de', name:L('Німеччина'), url:BASE+'countries/de.m3u', on:false },
+  { id:'fr', name:L('Франція'), url:BASE+'countries/fr.m3u', on:false },
+  { id:'nl', name:L('Нідерланди'), url:BASE+'countries/nl.m3u', on:false },
+  { id:'news', name:L('Новини (світ)'), url:BASE+'categories/news.m3u', on:false },
+  { id:'sports', name:L('Спорт (світ)'), url:BASE+'categories/sports.m3u', on:false },
+  { id:'movies', name:L('Кіно (світ)'), url:BASE+'categories/movies.m3u', on:false },
+  { id:'music', name:L('Музика (світ)'), url:BASE+'categories/music.m3u', on:false }
+];
+var DAY = 86400000;
+
+function $(id) { return document.getElementById(id); }
+function load(k, d) { try { var v = localStorage.getItem('iptv.' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+function save(k, v) { try { localStorage.setItem('iptv.' + k, JSON.stringify(v)); } catch (e) { toast(L('Памʼять застосунку заповнена')); } }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+var toastT = null;
+function toast(msg, ms) { var t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(function () { t.style.display = 'none'; }, ms || 3000); }
+
+// ---- config: built-in sources (on/off) + user-added playlists ----
+var cfg = load('cfg', null);
+if (!cfg) cfg = { sources: BUILTIN.map(function (s) { return { id:s.id, on:s.on }; }), custom: [] };
+function sourceList() {
+  var on = {}; cfg.sources.forEach(function (s) { on[s.id] = s.on; });
+  var l = BUILTIN.map(function (s) { return { id:s.id, name:s.name, url:s.url, on: on[s.id] !== undefined ? on[s.id] : s.on }; });
+  (cfg.custom || []).forEach(function (c, i) { l.push({ id:'c' + i, name:c.name, url:c.url, on:c.on !== false, custom:true, ci:i }); });
+  return l;
+}
+var fav = load('fav', []), recent = load('recent', []), dead = load('dead', {});
+Object.keys(dead).forEach(function (u) { if (Date.now() - dead[u] > 7 * DAY) delete dead[u]; });   // retry dead streams weekly
+
+// ---- M3U ----
+function parseM3U(text, src) {
+  var out = [], cur = null, lines = text.split(/\r?\n/);
+  for (var i = 0; i < lines.length; i++) {
+    var l = lines[i].trim();
+    if (!l) continue;
+    if (l.indexOf('#EXTINF') === 0) {
+      var comma = l.lastIndexOf(',');
+      var attrs = l.slice(0, comma), name = l.slice(comma + 1).trim();
+      var a = {}; attrs.replace(/([\w-]+)="([^"]*)"/g, function (_, k, v) { a[k] = v; return ''; });
+      var q = ''; name = name.replace(/\s*\((\d{3,4}p)\)/i, function (_, x) { q = x; return ''; });
+      var tags = []; name = name.replace(/\s*\[([^\]]+)\]/g, function (_, x) { tags.push(x); return ''; });
+      cur = { n:name.trim(), l:a['tvg-logo'] || '', g:a['group-title'] || '', id:a['tvg-id'] || '', q:q, tg:tags.join(', '), s:src };
+      if (a['http-user-agent'] || a['http-referrer']) cur.h = 1;   // needs custom headers — <video> can't send them, may fail
+    } else if (l.charAt(0) !== '#' && cur) {
+      cur.u = l; out.push(cur); cur = null;
+    }
+  }
+  return out;
+}
+
+// ---- channels: cached per source (localStorage), refreshed daily in the background ----
+var chans = {};    // source id -> [channel]
+function fetchSource(s, force) {
+  var c = load('cache.' + s.id, null);
+  if (c && c.list) chans[s.id] = c.list;
+  if (c && !force && Date.now() - c.t < DAY) return Promise.resolve();
+  return fetch(s.url, { cache:'no-store' }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(function (txt) { var list = parseM3U(txt, s.id); chans[s.id] = list; save('cache.' + s.id, { t:Date.now(), list:list }); })
+    .catch(function (e) { if (!chans[s.id]) toast(L('Не вдалося завантажити «') + s.name + '»: ' + e.message, 5000); });
+}
+function refreshAll(force) {
+  var ss = sourceList().filter(function (s) { return s.on; });
+  $('sub').textContent = L('оновлюю списки…');
+  return Promise.all(ss.map(function (s) { return fetchSource(s, force); })).then(function () { buildSide(); renderGrid(); });
+}
+function allOn() { var r = []; sourceList().forEach(function (s) { if (s.on && chans[s.id]) r = r.concat(chans[s.id]); }); return r; }
+function byUrl(u) { var a = allOn(); for (var i = 0; i < a.length; i++) if (a[i].u === u) return a[i]; return null; }
+
+// ---- categories (left) ----
+var cats = [], catSel = 0;
+function buildSide() {
+  cats = [{ id:'fav', name:L('★ Обрані') }, { id:'recent', name:L('🕘 Нещодавні') }];
+  sourceList().forEach(function (s) { if (s.on) cats.push({ id:'src:' + s.id, name:s.name, sep: cats.length === 2 }); });
+  cats.push({ id:'sources', name:L('⚙ Джерела'), sep:true });
+  if (catSel >= cats.length) catSel = 0;
+  var h = '';
+  cats.forEach(function (c, i) {
+    var n = c.id === 'sources' ? '' : listFor(c.id).length;
+    h += '<div class="cat' + (c.sep ? ' sep' : '') + (i === catSel ? ' sel' : '') + (zone === 'side' && i === sideF ? ' focus' : '') +
+      '" data-i="' + i + '">' + esc(c.name) + '<span class="n">' + n + '</span></div>';
+  });
+  $('side').innerHTML = h;
+  var total = allOn().length;
+  $('sub').textContent = total ? total + L(' каналів') : L('немає каналів — перевір джерела');
+}
+function listFor(id) {
+  if (id === 'fav') return fav.map(byUrl).filter(Boolean);
+  if (id === 'recent') return recent.map(byUrl).filter(Boolean);
+  if (id.indexOf('src:') === 0) return chans[id.slice(4)] || [];
+  return [];
+}
+
+// ---- EPG (written by the TV-side service iptv/service/epg.py into this app's folder) ----
+var epg = {};
+function loadEpg() {
+  return fetch('epg.json', { cache:'no-store' }).then(function (r) { if (!r.ok) throw 0; return r.json(); })
+    .then(function (d) { epg = (d && d.p) || {}; }).catch(function () {});
+}
+function hm(t) { var d = new Date(t * 1000); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+function nowNext(c) {
+  var l = c && epg[c.u]; if (!l) return null;
+  var t = Date.now() / 1000;
+  for (var i = 0; i < l.length; i++) if (l[i][0] <= t && t < l[i][1]) return { cur:l[i], next:l[i + 1], i:i, list:l };
+  for (i = 0; i < l.length; i++) if (l[i][0] > t) return { cur:null, next:l[i], i:i, list:l };
+  return null;
+}
+function pct(p) { var t = Date.now() / 1000; return Math.max(0, Math.min(100, (t - p[0]) / (p[1] - p[0]) * 100)); }
+
+// ---- grid (channels) ----
+var view = [], gridF = 0, query = '';
+var COLS = 4;
+function renderGrid() {
+  var base = query ? allOn() : listFor(cats[catSel] ? cats[catSel].id : 'fav');
+  if (query) { var q = query.toLowerCase(); base = base.filter(function (c) { return c.n.toLowerCase().indexOf(q) >= 0 || c.g.toLowerCase().indexOf(q) >= 0; }); }
+  view = base;
+  if (gridF >= view.length) gridF = Math.max(0, view.length - 1);
+  var h = '';
+  for (var i = 0; i < view.length; i++) {
+    var c = view[i];
+    h += '<div class="ch' + (dead[c.u] ? ' dead' : '') + '" data-i="' + i + '"><div class="logo">' +
+      (c.l ? '<img loading="lazy" decoding="async" src="' + esc(c.l) + '" onerror="this.remove()">' : esc(c.n.charAt(0))) +
+      '</div><div class="t"><div class="name">' + esc(c.n) + '</div>' + cardInfo(c) + '</div><div class="num">' + (i + 1) + '</div>' +
+      (fav.indexOf(c.u) >= 0 ? '<div class="fav">★</div>' : '') + '</div>';
+  }
+  $('grid').innerHTML = h;
+  var e = $('empty'); e.style.display = view.length ? 'none' : 'block';
+  e.textContent = query ? L('Нічого не знайдено') : (cats[catSel] && cats[catSel].id === 'fav' ? L('Тут будуть обрані канали — червона кнопка на каналі') :
+                  cats[catSel] && cats[catSel].id === 'recent' ? L('Ще нічого не дивився') : L('Порожньо'));
+  markGrid();
+}
+function cardInfo(c) {
+  var nn = nowNext(c);
+  if (nn && nn.cur) return '<div class="now">▶ ' + esc(nn.cur[2]) + L(' · до ') + hm(nn.cur[1]) + '</div><div class="bar" style="width:' + pct(nn.cur).toFixed(0) + '%"></div>';
+  if (nn && nn.next) return L('<div class="now">о ') + hm(nn.next[0]) + ' · ' + esc(nn.next[2]) + '</div>';
+  return '<div class="meta">' + esc([c.g, c.q, c.tg].filter(Boolean).join(' · ')) + '</div>';
+}
+function markGrid() {
+  var els = $('grid').children;
+  for (var i = 0; i < els.length; i++) els[i].classList.toggle('focus', zone === 'grid' && i === gridF);
+  var f = els[gridF];
+  if (f && zone === 'grid') {   // keep the focused row in view
+    var w = $('gridwrap'), top = f.offsetTop, bot = top + f.offsetHeight;
+    if (top - 6 < w.scrollTop) w.scrollTop = top - 6; else if (bot + 60 > w.scrollTop + w.clientHeight) w.scrollTop = bot + 60 - w.clientHeight;
+  }
+}
+function markSide() { var els = $('side').children; for (var i = 0; i < els.length; i++) { els[i].classList.toggle('focus', zone === 'side' && i === sideF); els[i].classList.toggle('sel', i === catSel); } }
+
+// ---- focus zones ----
+var zone = 'side', sideF = 0;
+// search: arrows only highlight it; OK opens the keyboard (focus), so moving around never pops the keyboard up
+function setZone(z) { zone = z; $('search').classList.toggle('focus', z === 'search'); if (z !== 'search') $('search').blur(); markSide(); markGrid(); }
+function selectCat(i) {
+  catSel = i; sideF = i; query = ''; $('search').value = '';
+  if (cats[i].id === 'sources') { markSide(); openSources(); return; }
+  gridF = 0; $('gridwrap').scrollTop = 0; renderGrid(); markSide();
+}
+function toggleFav(c) {
+  if (!c) return;
+  var k = fav.indexOf(c.u);
+  if (k >= 0) { fav.splice(k, 1); toast(L('Прибрано з обраних')); } else { fav.unshift(c.u); toast(L('★ Додано в обрані')); }
+  save('fav', fav); buildSide(); markSide();
+  if (!$('player').classList.contains('show')) renderGrid();
+}
+
+// ---- player ----
+var pl = { list:[], i:0, osdT:null, stallT:null, num:'', numT:null };
+var video = $('video');
+function play(list, i) {
+  pl.list = list; pl.i = i;
+  var c = list[i]; if (!c) return;
+  $('player').classList.add('show'); showProg(false);
+  recent = [c.u].concat(recent.filter(function (u) { return u !== c.u; })).slice(0, 30); save('recent', recent);
+  video.removeAttribute('src'); video.load();
+  video.src = c.u; var p = video.play(); if (p && p.catch) p.catch(function () {});
+  osd(c, L('підключаюсь…'));
+  clearTimeout(pl.stallT); pl.stallT = setTimeout(function () { if (video.readyState < 2) fail(L('Канал не відповідає')); }, 20000);
+}
+function osd(c, state, keep) {
+  var o = $('osd');
+  o.querySelector('.logo').innerHTML = c.l ? '<img src="' + esc(c.l) + '" onerror="this.remove()">' : '';
+  o.querySelector('.num').textContent = pl.i + 1;
+  o.querySelector('.name').textContent = c.n;
+  var srcName = ''; sourceList().forEach(function (s) { if (s.id === c.s) srcName = s.name; });
+  o.querySelector('.meta').textContent = [srcName, c.g, c.q].filter(Boolean).join(' · ') + (fav.indexOf(c.u) >= 0 ? '  ★' : '');
+  o.querySelector('.state').textContent = state || '';
+  var nn = nowNext(c), pr = o.querySelector('.prog'), pb = o.querySelector('.pbar');
+  if (nn && (nn.cur || nn.next)) {
+    pr.textContent = (nn.cur ? L('Зараз: ') + nn.cur[2] + ' (' + hm(nn.cur[0]) + '–' + hm(nn.cur[1]) + ')' : '') +
+      (nn.next ? (nn.cur ? '   ·   ' : '') + L('Далі: ') + hm(nn.next[0]) + ' ' + nn.next[2] : '') + L('   ▶ програма');
+    pr.style.display = 'block'; pb.style.display = nn.cur ? 'block' : 'none';
+    if (nn.cur) pb.firstChild.style.width = pct(nn.cur).toFixed(0) + '%';
+  } else { pr.style.display = 'none'; pb.style.display = 'none'; }
+  o.classList.remove('hide'); clearTimeout(pl.osdT);
+  if (!keep) pl.osdT = setTimeout(function () { o.classList.add('hide'); }, 4500);
+}
+function fail(msg) {
+  var c = pl.list[pl.i]; if (!c) return;
+  dead[c.u] = Date.now(); save('dead', dead);
+  osd(c, msg + L(' — ▲▼ інший канал'), true);
+}
+video.addEventListener('playing', function () { clearTimeout(pl.stallT); var c = pl.list[pl.i]; if (c) { if (dead[c.u]) { delete dead[c.u]; save('dead', dead); } osd(c, ''); } });
+video.addEventListener('error', function () { clearTimeout(pl.stallT); fail(L('Не вдалося відкрити канал')); });
+function showProg(on) {
+  var p = $('prog'); if (!on) { p.classList.remove('show'); return; }
+  var c = pl.list[pl.i], nn = nowNext(c);
+  var h = '<h2>' + esc(c ? c.n : '') + L('</h2><div class="sub">Програма передач · ◀ або BACK — закрити</div>');
+  if (!nn) h += L('<div class="sub">Для цього каналу програми немає</div>');
+  else nn.list.slice(nn.cur ? nn.i : nn.i, nn.i + 9).forEach(function (x) {
+    var cur = nn.cur && x === nn.cur;
+    h += '<div class="pi' + (cur ? ' cur' : '') + '"><div class="tm">' + hm(x[0]) + '–' + hm(x[1]) + (cur ? L(' · зараз') : '') + '</div><div class="tt">' + esc(x[2]) + '</div>' +
+      (x[3] && cur ? '<div class="ds">' + esc(x[3]) + '</div>' : '') + '</div>';
+  });
+  p.innerHTML = h; p.classList.add('show'); $('osd').classList.add('hide');
+}
+function zap(d) { if (!pl.list.length) return; var n = (pl.i + d + pl.list.length) % pl.list.length; play(pl.list, n); }
+function closePlayer() {
+  clearTimeout(pl.stallT); video.pause(); video.removeAttribute('src'); video.load();
+  $('player').classList.remove('show'); showProg(false); renderGrid();
+}
+function numKey(d) {
+  pl.num = (pl.num + d).slice(0, 4); var b = $('numin'); b.textContent = pl.num; b.style.display = 'block';
+  clearTimeout(pl.numT); pl.numT = setTimeout(function () {
+    b.style.display = 'none'; var n = parseInt(pl.num, 10) - 1; pl.num = '';
+    if (n >= 0 && n < pl.list.length) play(pl.list, n); else toast(L('Немає каналу з таким номером'));
+  }, 1500);
+}
+
+// ---- sources dialog ----
+var modal = { items:[], f:0 };
+function openSources() {
+  var ss = sourceList();
+  modal.items = ss.map(function (s) { return { label:s.name, src:s, r: s.on ? L('увімкнено') : L('вимкнено'), on:s.on }; });
+  modal.items.push({ label:L('＋ Додати свій плейлист (посилання M3U)'), add:true });
+  modal.items.push({ label:L('Готово'), done:true });
+  modal.f = 0; renderModal(); $('modal').classList.add('show');
+}
+function renderModal() {
+  var h = L('<h2>Джерела каналів</h2><div class="sub">Безкоштовні відкриті плейлисти (iptv-org). OK — увімкнути/вимкнути; на своєму плейлисті 🔴 — видалити.</div><div id="mlist">');
+  modal.items.forEach(function (it, i) {
+    h += '<div class="mi' + (it.on ? ' on' : '') + (i === modal.f ? ' focus' : '') + '" data-i="' + i + '">' + esc(it.label) +
+      (it.r ? '<span class="r">' + esc(it.r) + (it.src && it.src.custom ? L(' · свій') : '') + '</span>' : '') + '</div>';
+  });
+  $('mbox').innerHTML = h + '</div>';
+  var f = $('mbox').querySelectorAll('.mi')[modal.f], l = $('mlist');
+  l.style.maxHeight = '700px'; l.style.overflow = 'hidden';
+  if (f) { if (f.offsetTop - l.offsetTop < l.scrollTop) l.scrollTop = f.offsetTop - l.offsetTop; else if (f.offsetTop - l.offsetTop + 80 > l.scrollTop + 700) l.scrollTop = f.offsetTop - l.offsetTop + 80 - 700; }
+}
+function modalOk() {
+  var it = modal.items[modal.f]; if (!it) return;
+  if (it.done) { closeModal(); return; }
+  if (it.add) { addCustom(); return; }
+  var s = it.src;
+  if (s.custom) cfg.custom[s.ci].on = !s.on;
+  else { var found = false; cfg.sources.forEach(function (x) { if (x.id === s.id) { x.on = !s.on; found = true; } }); if (!found) cfg.sources.push({ id:s.id, on:!s.on }); }
+  save('cfg', cfg);
+  var f = modal.f; openSources(); modal.f = f; renderModal();
+}
+function addCustom() {
+  // webOS has no prompt(): inline inputs with the system keyboard
+  $('mbox').innerHTML = L('<h2>Свій плейлист</h2><div class="sub">Посилання на M3U, потім назва. OK — далі, BACK — скасувати.</div>') +
+    '<input id="addurl" style="width:100%;height:70px;border-radius:18px;background:#1c1c22;border:3px solid #fff;color:#fff;font-size:26px;padding:0 22px" placeholder="https://…/playlist.m3u">' +
+    L('<input id="addname" style="width:100%;height:70px;margin-top:14px;border-radius:18px;background:#1c1c22;border:3px solid #333;color:#fff;font-size:26px;padding:0 22px" placeholder="Назва (необовʼязково)">');
+  modal.adding = true; setTimeout(function () { $('addurl').focus(); }, 50);
+}
+function finishAdd() {
+  var u = ($('addurl').value || '').trim(), n = ($('addname').value || '').trim();
+  modal.adding = false;
+  if (!/^https?:\/\//i.test(u)) { toast(L('Потрібне посилання http(s)://…')); openSources(); return; }
+  cfg.custom = cfg.custom || []; cfg.custom.push({ name: n || u.replace(/^https?:\/\//, '').split('/')[0], url:u, on:true });
+  save('cfg', cfg); openSources(); toast(L('Додано, завантажую…'));
+  refreshAll(false);
+}
+function closeModal() { $('modal').classList.remove('show'); modal.adding = false; refreshAll(false).then(function () { setZone('side'); }); }
+function modalDelete() {
+  var it = modal.items[modal.f]; if (!it || !it.src || !it.src.custom) return;
+  cfg.custom.splice(it.src.ci, 1); save('cfg', cfg);
+  try { localStorage.removeItem('iptv.cache.' + it.src.id); } catch (e) {}
+  openSources(); toast(L('Плейлист видалено'));
+}
+
+// ---- keys ----
+var K = { LEFT:37, UP:38, RIGHT:39, DOWN:40, OK:13, BACK:461, ESC:27, CHUP:33, CHDN:34, RED:403, GREEN:404, YELLOW:405, BLUE:406 };
+function exitApp() { try { if (window.webOSSystem && webOSSystem.platformBack) return webOSSystem.platformBack(); } catch (e) {}
+  try { if (window.PalmSystem && PalmSystem.platformBack) return PalmSystem.platformBack(); } catch (e) {} window.close(); }
+document.addEventListener('keydown', function (e) {
+  var k = e.keyCode, handled = true;
+  if ($('modal').classList.contains('show')) {
+    if (modal.adding) {
+      if (k === K.OK) { if (document.activeElement && document.activeElement.id === 'addurl') $('addname').focus(); else finishAdd(); }
+      else if (k === K.BACK || k === K.ESC) { modal.adding = false; openSources(); }
+      else handled = false;
+    } else if (k === K.UP) { modal.f = Math.max(0, modal.f - 1); renderModal(); }
+    else if (k === K.DOWN) { modal.f = Math.min(modal.items.length - 1, modal.f + 1); renderModal(); }
+    else if (k === K.OK) modalOk();
+    else if (k === K.RED) modalDelete();
+    else if (k === K.BACK || k === K.ESC || k === K.BLUE) closeModal();
+    else handled = false;
+  } else if ($('player').classList.contains('show')) {
+    if (k === K.UP || k === K.CHUP) zap(-1);
+    else if (k === K.DOWN || k === K.CHDN) zap(1);
+    else if (k === K.RIGHT) showProg(!$('prog').classList.contains('show'));
+    else if ((k === K.LEFT || k === K.BACK || k === K.ESC) && $('prog').classList.contains('show')) showProg(false);
+    else if (k === K.OK || k === K.LEFT) { var c = pl.list[pl.i]; if (c) osd(c, $('osd').querySelector('.state').textContent); }
+    else if (k === K.BACK || k === K.ESC) closePlayer();
+    else if (k === K.RED) { toggleFav(pl.list[pl.i]); osd(pl.list[pl.i], ''); }
+    else if (k >= 48 && k <= 57) numKey(String(k - 48));
+    else handled = false;
+  } else if (zone === 'search') {
+    if (k === K.OK && document.activeElement !== $('search')) { $('search').focus(); }
+    else if (k === K.DOWN || k === K.OK) { setZone(view.length ? 'grid' : 'side'); }
+    else if (k === K.BACK || k === K.ESC) { query = ''; $('search').value = ''; renderGrid(); setZone('side'); }
+    else handled = false;
+  } else if (zone === 'side') {
+    if (k === K.UP) { if (sideF > 0) { sideF--; markSide(); } else setZone('search'); }
+    else if (k === K.DOWN) { if (sideF < cats.length - 1) { sideF++; markSide(); } }
+    else if (k === K.RIGHT) { if (cats[sideF] && cats[sideF].id !== 'sources') { if (sideF !== catSel) selectCat(sideF); if (view.length) setZone('grid'); } }
+    else if (k === K.OK) { selectCat(sideF); if (cats[sideF].id !== 'sources' && view.length) setZone('grid'); }
+    else if (k === K.BACK || k === K.ESC) exitApp();
+    else if (k === K.GREEN) { setZone('search'); $('search').focus(); }
+    else if (k === K.YELLOW) { toast(L('Оновлюю списки…')); refreshAll(true); }
+    else if (k === K.BLUE) openSources();
+    else handled = false;
+  } else if (zone === 'grid') {
+    if (k === K.LEFT) { if (gridF % COLS === 0) setZone('side'); else { gridF--; markGrid(); } }
+    else if (k === K.RIGHT) { if (gridF < view.length - 1) { gridF++; markGrid(); } }
+    else if (k === K.UP) { if (gridF >= COLS) { gridF -= COLS; markGrid(); } else setZone('search'); }
+    else if (k === K.DOWN) { if (gridF + COLS < view.length) { gridF += COLS; markGrid(); } else if (Math.floor(gridF / COLS) < Math.floor((view.length - 1) / COLS)) { gridF = view.length - 1; markGrid(); } }
+    else if (k === K.OK) play(view, gridF);
+    else if (k === K.RED) toggleFav(view[gridF]);
+    else if (k === K.BACK || k === K.ESC) setZone('side');
+    else if (k === K.GREEN) { setZone('search'); $('search').focus(); }
+    else if (k === K.YELLOW) { toast(L('Оновлюю списки…')); refreshAll(true); }
+    else if (k === K.BLUE) openSources();
+    else handled = false;
+  } else handled = false;
+  if (handled) { e.preventDefault(); e.stopPropagation(); }
+}, true);
+
+// ---- pointer (Magic Remote) ----
+$('side').addEventListener('mouseover', function (e) { var t = e.target.closest('.cat'); if (!t) return; zone = 'side'; sideF = +t.dataset.i; markSide(); markGrid(); });
+$('side').addEventListener('click', function (e) { var t = e.target.closest('.cat'); if (t) selectCat(+t.dataset.i); });
+$('grid').addEventListener('mouseover', function (e) { var t = e.target.closest('.ch'); if (!t) return; zone = 'grid'; gridF = +t.dataset.i; markSide(); markGrid(); });
+$('grid').addEventListener('click', function (e) { var t = e.target.closest('.ch'); if (t) play(view, +t.dataset.i); });
+$('gridwrap').addEventListener('wheel', function (e) { $('gridwrap').scrollTop += e.deltaY; });
+$('mbox').addEventListener('mouseover', function (e) { var t = e.target.closest('.mi'); if (!t) return; modal.f = +t.dataset.i; renderModal(); });
+$('mbox').addEventListener('click', function (e) { var t = e.target.closest('.mi'); if (!t) return; modal.f = +t.dataset.i; modalOk(); });
+$('modal').addEventListener('click', function (e) { if (e.target === $('modal') && !modal.adding) closeModal(); });
+$('search').addEventListener('input', function () { query = $('search').value.trim(); gridF = 0; $('gridwrap').scrollTop = 0; renderGrid(); });
+$('search').addEventListener('focus', function () { zone = 'search'; $('search').classList.add('focus'); markSide(); markGrid(); });
+$('player').addEventListener('click', function () { var c = pl.list[pl.i]; if (c) osd(c, ''); });
+
+// ---- clock ----
+function tick() { var d = new Date(); $('clock').textContent = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+tick(); setInterval(tick, 15000);
+
+// ---- start: cached lists at once, then refresh ----
+sourceList().forEach(function (s) { var c = load('cache.' + s.id, null); if (c && c.list) chans[s.id] = c.list; });
+buildSide(); selectCat(allOn().length && fav.length ? 0 : 2); setZone('side');
+loadEpg().then(function () { if (!$('player').classList.contains('show')) renderGrid(); });
+setInterval(function () { loadEpg().then(function () { if (!$('player').classList.contains('show') && zone !== 'search') { var st = $('gridwrap').scrollTop; renderGrid(); $('gridwrap').scrollTop = st; } }); }, 30 * 60000);
+refreshAll(false).then(function () { if (!fav.length && catSel < 2) selectCat(2); });
+// relaunch (GUIDE again / from the hub): close the player, back to the list
+document.addEventListener('webOSRelaunch', function () { if ($('player').classList.contains('show')) closePlayer(); setZone('side'); });
+})();
+</script>
+</body>
+</html>

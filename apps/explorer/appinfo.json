@@ -1,0 +1,14 @@
+{
+  "id": "com.user.explorer",
+  "version": "1.4.2",
+  "vendor": "User",
+  "type": "web",
+  "main": "index.html",
+  "title": "Файли",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "iconColor": "#e11d2a",
+  "bgColor": "#070708",
+  "disableBackHistoryAPI": true,
+  "requiredACG": []
+}

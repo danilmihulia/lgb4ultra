@@ -1,0 +1,15 @@
+{
+  "id": "com.user.iptv",
+  "version": "1.2.1",
+  "vendor": "User",
+  "type": "web",
+  "main": "index.html",
+  "title": "Канали",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "iconColor": "#2563eb",
+  "bgColor": "#070708",
+  "disableBackHistoryAPI": true,
+  "noSplashOnLaunch": true,
+  "requiredACG": []
+}

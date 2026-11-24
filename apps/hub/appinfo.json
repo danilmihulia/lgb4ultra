@@ -1,0 +1,28 @@
+{
+  "id": "com.webos.app.home",
+  "version": "3.9.0",
+  "vendor": "User",
+  "type": "web",
+  "main": "index.html",
+  "title": "My Home",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "imageForRecents": "largeIcon.png",
+  "iconColor": "red",
+  "bgColor": "#0a0a0a",
+  "appCategory": [
+    "home"
+  ],
+  "disableBackHistoryAPI": true,
+  "supportQuickStart": true,
+  "noSplashOnLaunch": true,
+  "visible": false,
+  "class": {
+    "hidden": true
+  },
+  "lockable": false,
+  "enablePigScreenSaver": true,
+  "handleScreenRemoteKey": true,
+  "requiredACG": [],
+  "transparent": true
+}

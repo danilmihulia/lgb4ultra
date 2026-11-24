@@ -1,0 +1,6 @@
+# TV scripts must keep LF line endings (a CRLF shell script does not run on the TV)
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.so binary
+*.ipk binary

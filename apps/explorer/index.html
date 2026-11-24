@@ -1,0 +1,1311 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920, height=1080, initial-scale=1">
+<title>Файли</title>
+<style>
+  :root { --accent:#e11d2a; --bg:#070708; --panel:#121216; --row:#18181e; --muted:#8a8a93; --dim:#55555d;
+    --ease:cubic-bezier(.22,.61,.24,1); }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { width:1920px; height:1080px; overflow:hidden; background:var(--bg); color:#fff;
+    font-family:-apple-system,"Segoe UI",system-ui,sans-serif; -webkit-user-select:none; user-select:none; }
+  svg { width:100%; height:100%; display:block; }
+  .page { position:absolute; inset:0; padding:32px 40px 0; display:flex; flex-direction:column; }
+  header { display:flex; align-items:center; gap:24px; height:72px; flex:0 0 auto; }
+  header .ttl { font-size:40px; font-weight:700; letter-spacing:.3px; display:flex; align-items:center; gap:14px; }
+  header .ttl i { width:44px; height:44px; color:var(--accent); }
+  header .crumb { flex:1; font-size:22px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; direction:rtl; text-align:left; }
+  header .crumb b { color:#fff; font-weight:600; }
+  header .space { font-size:19px; color:var(--dim); white-space:nowrap; }
+  .body { flex:1; display:flex; gap:28px; min-height:0; padding:18px 0 0; }
+
+  /* places */
+  .side { width:360px; flex:0 0 360px; display:flex; flex-direction:column; gap:10px; }
+  .side h3 { font-size:17px; color:var(--dim); font-weight:600; text-transform:uppercase; letter-spacing:1.5px; margin:10px 6px 2px; }
+  .place { display:flex; align-items:center; gap:16px; height:74px; padding:0 18px; border-radius:16px; background:var(--panel);
+    cursor:pointer; transition:transform .16s var(--ease), box-shadow .16s var(--ease), background .16s; }
+  .place i { width:36px; height:36px; flex:0 0 36px; color:#cfcfd6; }
+  .place .pn { flex:1; min-width:0; }
+  .place .pn div:first-child { font-size:23px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .place .pn div:last-child { font-size:16px; color:var(--muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .place.sel { background:#1f1f27; }
+  .place.sel i { color:var(--accent); }
+  .place.off { opacity:.45; }
+  .focus { box-shadow:0 0 0 3px #fff, 0 12px 30px rgba(0,0,0,.5) !important; transform:scale(1.02); z-index:2; position:relative; }
+
+  /* list */
+  .listwrap { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .listhead { display:flex; font-size:16px; color:var(--dim); text-transform:uppercase; letter-spacing:1.2px; padding:0 20px 10px 86px; }
+  .listhead .c1 { flex:1; } .listhead .c2 { width:150px; text-align:right; } .listhead .c3 { width:230px; text-align:right; }
+  .list { flex:1; overflow:hidden; position:relative; padding:6px 8px; margin:0 -8px; }
+  .rows { position:relative; transition:transform .18s var(--ease); }
+  .row { display:flex; align-items:center; height:64px; padding:0 20px; border-radius:12px; margin-bottom:6px; background:var(--row); font-size:22px;
+    transition:transform .14s var(--ease), box-shadow .14s var(--ease), background .14s; cursor:pointer; }
+  .row i { width:34px; height:34px; flex:0 0 34px; margin-right:12px; color:#b9b9c2; }
+  .row .mk { width:20px; flex:0 0 20px; margin-right:12px; height:20px; border-radius:6px; border:2px solid #3a3a44; }
+  .row.marked .mk { background:var(--accent); border-color:var(--accent); }
+  .row.marked { background:#2a1517; }
+  .row .nm { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .nm small { color:var(--dim); font-size:16px; margin-left:12px; }
+  .row .sz { width:150px; text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; font-size:19px; }
+  .row .dt { width:230px; text-align:right; color:var(--dim); font-variant-numeric:tabular-nums; font-size:19px; }
+  .row.dir i { color:#e8b04a; } .row.img i { color:#5fb0ff; }
+  .row.focus { background:#2a2a33; transform:scale(1.01); }
+  .empty { color:var(--muted); font-size:26px; padding:60px 20px; text-align:center; }
+
+  /* preview pane */
+  .pane { width:520px; flex:0 0 520px; display:flex; flex-direction:column; gap:14px; }
+  .thumb { height:300px; border-radius:16px; background:var(--panel) center/contain no-repeat; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .thumb img { max-width:100%; max-height:100%; object-fit:contain; opacity:0; transition:opacity .25s; }
+  .thumb img.ok { opacity:1; }
+  .thumb i { width:120px; height:120px; color:#2c2c35; }
+  .meta { font-size:19px; color:var(--muted); line-height:1.6; word-break:break-all; }
+  .meta b { color:#fff; font-size:22px; display:block; margin-bottom:4px; word-break:break-all; }
+  .lock { display:inline-flex; align-items:center; gap:8px; font-size:17px; color:#c9a14a; background:#2a2414; padding:6px 12px; border-radius:10px; }
+
+  /* footer: colour-button legend (also clickable with the Magic Remote pointer) */
+  footer { flex:0 0 86px; display:flex; align-items:center; gap:14px; }
+  .key { display:flex; align-items:center; gap:10px; height:50px; padding:0 18px; border-radius:12px; background:var(--panel); font-size:19px; color:#d6d6dc; cursor:pointer; }
+  .key.dis { opacity:.3; }
+  .key s { width:18px; height:18px; border-radius:50%; display:inline-block; text-decoration:none; }
+  .key .r { background:#e5323c; } .key .g { background:#2fb653; } .key .y { background:#e8c13a; } .key .b { background:#3b82f6; }
+  .key kbd { font:inherit; font-size:16px; padding:3px 8px; border-radius:6px; background:#26262e; color:#fff; }
+  footer .sp { flex:1; }
+  footer .info { font-size:19px; color:var(--muted); }
+
+  /* fullscreen preview */
+  #pv { position:fixed; inset:0; background:#000; display:none; z-index:20; }
+  #pv.on { display:block; }
+  #pv img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+  #pv .bar { position:absolute; left:0; right:0; bottom:0; padding:28px 48px 34px; display:flex; align-items:flex-end; gap:24px;
+    background:linear-gradient(0deg, rgba(0,0,0,.85), rgba(0,0,0,0)); transition:opacity .35s; }
+  #pv.hide .bar, #pv.hide .nav { opacity:0; }
+  #pv .bar .t { flex:1; min-width:0; }
+  #pv .bar .t b { display:block; font-size:28px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #pv .bar .t span { font-size:19px; color:#aaa; }
+  #pv .nav { position:absolute; top:50%; margin-top:-40px; width:80px; height:80px; border-radius:50%; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; font-size:46px; color:#fff; cursor:pointer; transition:opacity .35s; }
+  #pv .nav.l { left:30px; } #pv .nav.r { right:30px; }
+  #pv .spin { position:absolute; left:50%; top:50%; margin:-14px; width:28px; height:28px; border-radius:50%; border:3px solid #444; border-top-color:#fff; animation:sp 1s linear infinite; display:none; }
+  #pv.loading .spin { display:block; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+
+  .row.vid i { color:#c58cff; } .row.aud i { color:#3ccf9a; }
+  .row .nm small.where { color:#6d6d78; }
+
+  /* video player */
+  #vp { position:fixed; inset:0; background:#000; display:none; z-index:22; }
+  #vp.on { display:block; }
+  #vp video { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; }
+  #vp .ov { position:absolute; left:0; right:0; bottom:0; padding:90px 60px 40px; background:linear-gradient(0deg, rgba(0,0,0,.9), rgba(0,0,0,0)); transition:opacity .35s; }
+  #vp .top { position:absolute; left:0; right:0; top:0; padding:36px 60px 80px; background:linear-gradient(180deg, rgba(0,0,0,.75), rgba(0,0,0,0)); transition:opacity .35s; font-size:30px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #vp .top span { display:block; font-size:19px; font-weight:400; color:#aaa; margin-top:6px; }
+  #vp.hide .ov, #vp.hide .top { opacity:0; }
+  #vp.hide { cursor:none; }
+  .prog { position:relative; height:10px; border-radius:5px; background:rgba(255,255,255,.22); cursor:pointer; }
+  .prog .buf { position:absolute; left:0; top:0; bottom:0; border-radius:5px; background:rgba(255,255,255,.28); }
+  .prog .cur { position:absolute; left:0; top:0; bottom:0; border-radius:5px; background:var(--accent); }
+  .prog .knob { position:absolute; top:50%; width:24px; height:24px; margin:-12px 0 0 -12px; border-radius:50%; background:#fff; box-shadow:0 0 0 4px rgba(225,29,42,.45); }
+  .ctl { display:flex; align-items:center; gap:18px; margin-top:22px; font-size:22px; color:#ddd; }
+  .ctl .pp { width:64px; height:64px; border-radius:50%; background:#fff; color:#000; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:0 0 64px; }
+  .ctl .pp svg { width:30px; height:30px; }
+  .ctl .tm { font-variant-numeric:tabular-nums; font-size:24px; }
+  .ctl .sp { flex:1; }
+  .ctl .hint { font-size:18px; color:#9a9aa3; }
+  .ctl .hint kbd { font:inherit; font-size:16px; padding:3px 8px; border-radius:6px; background:rgba(255,255,255,.14); color:#fff; margin:0 4px 0 12px; }
+  #vp .osd { position:absolute; left:50%; top:46%; transform:translate(-50%,-50%); font-size:44px; font-weight:700; background:rgba(0,0,0,.55); padding:18px 34px; border-radius:20px; opacity:0; transition:opacity .25s; pointer-events:none; font-variant-numeric:tabular-nums; }
+  #vp .osd.on { opacity:1; }
+  #vp .err { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:1100px; text-align:center; font-size:28px; line-height:1.5; color:#ddd; display:none; }
+  #vp .err small { display:block; font-size:20px; color:#999; margin-top:12px; }
+  #vp.failed .err { display:block; }
+  #vp .spin { position:absolute; left:50%; top:50%; margin:-20px; width:40px; height:40px; border-radius:50%; border:4px solid #444; border-top-color:#fff; animation:sp 1s linear infinite; display:none; }
+  #vp.loading .spin { display:block; }
+
+  /* audio player */
+  #ap { position:fixed; inset:0; background:radial-gradient(1200px 700px at 20% 20%, #1a1420, #070708); display:none; z-index:22; padding:70px 90px 60px; }
+  #ap.on { display:flex; gap:70px; }
+  #ap .art { width:560px; flex:0 0 560px; display:flex; flex-direction:column; justify-content:center; }
+  #ap .disc { width:420px; height:420px; border-radius:50%; background:conic-gradient(from 0deg, #2a1d30, #121218, #2a1d30, #121218, #2a1d30); box-shadow:0 30px 80px rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; margin-bottom:46px; }
+  #ap .disc i { width:110px; height:110px; color:var(--accent); display:block; }
+  #ap.playing .disc { animation:sp 6s linear infinite; }
+  #ap .tt { font-size:36px; font-weight:700; line-height:1.25; word-break:break-word; max-height:136px; overflow:hidden; }
+  #ap .ts { font-size:21px; color:var(--muted); margin:12px 0 30px; }
+  #ap .pl { flex:1; min-width:0; display:flex; flex-direction:column; }
+  #ap .pl h3 { font-size:17px; color:var(--dim); font-weight:600; text-transform:uppercase; letter-spacing:1.5px; margin:0 0 14px 6px; }
+  #ap .plist { flex:1; overflow:hidden; position:relative; }
+  #ap .plrows { transition:transform .18s var(--ease); }
+  #ap .tr { display:flex; align-items:center; gap:16px; height:60px; padding:0 20px; border-radius:12px; margin-bottom:6px; font-size:22px; color:#cfcfd6; cursor:pointer; }
+  #ap .tr .n { width:44px; color:var(--dim); font-variant-numeric:tabular-nums; text-align:right; }
+  #ap .tr .nm { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #ap .tr .sz { color:var(--dim); font-size:18px; }
+  #ap .tr.cur { background:#2a1517; color:#fff; } #ap .tr.cur .n { color:var(--accent); }
+  #ap .tr.tf { box-shadow:inset 0 0 0 3px #fff; }
+  #ap .hint2 { font-size:18px; color:#8a8a93; margin-top:18px; }
+  #ap .hint2 kbd { font:inherit; font-size:16px; padding:3px 8px; border-radius:6px; background:#26262e; color:#fff; margin:0 4px 0 14px; }
+  #ap .hint2 kbd:first-child { margin-left:0; }
+
+  /* search input dialog */
+  .dlg input { width:100%; height:68px; border-radius:14px; border:2px solid #33333d; background:#0d0d11; color:#fff; font-size:26px; padding:0 20px; margin-bottom:26px; outline:none; }
+  .dlg input:focus { border-color:#fff; }
+
+  /* dialogs / menus */
+  #modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:40; }
+  #modal.on { display:flex; }
+  .dlg { width:820px; background:#17171d; border-radius:22px; padding:40px 44px 36px; box-shadow:0 30px 80px rgba(0,0,0,.6); }
+  .dlg h2 { font-size:32px; margin-bottom:14px; }
+  .dlg p { font-size:22px; color:#c3c3ca; line-height:1.5; margin-bottom:30px; white-space:pre-line; word-break:break-word; }
+  .dlg .btns { display:flex; gap:16px; flex-wrap:wrap; }
+  .dlg .btns.col { flex-direction:column; }
+  .btn { height:64px; padding:0 30px; border-radius:14px; background:#26262e; font-size:23px; font-weight:600; display:flex; align-items:center; cursor:pointer;
+    transition:transform .14s var(--ease), box-shadow .14s var(--ease); }
+  .btn.danger { background:#5b1419; color:#ffd7d9; }
+  .btn.focus { background:#fff; color:#000; }
+  .btn.danger.focus { background:var(--accent); color:#fff; }
+
+  #toast { position:fixed; left:50%; bottom:120px; transform:translateX(-50%) translateY(20px); background:#26262e; color:#fff; font-size:22px;
+    padding:18px 30px; border-radius:16px; opacity:0; transition:opacity .25s, transform .25s; z-index:60; max-width:1400px; text-align:center; pointer-events:none; }
+  #toast.on { opacity:1; transform:translateX(-50%) translateY(0); }
+  #boot { position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; z-index:80; font-size:26px; color:var(--muted); }
+  #boot.off { display:none; }
+  #boot .spin2 { width:46px; height:46px; border-radius:50%; border:4px solid #333; border-top-color:var(--accent); animation:sp 1s linear infinite; }
+  #boot.err .spin2 { display:none; }
+  #boot small { font-size:19px; color:var(--dim); max-width:1100px; text-align:center; line-height:1.5; }
+  /* наша екранна клавіатура */
+  .osk { position:fixed; left:50%; bottom:28px; transform:translate(-50%,30px); width:1560px; max-width:calc(100% - 80px); padding:18px; border-radius:26px;
+         background:rgba(22,22,28,.98); border:1px solid rgba(255,255,255,.14); box-shadow:0 24px 60px rgba(0,0,0,.7); z-index:60;
+         opacity:0; pointer-events:none; transition:opacity .16s ease, transform .2s cubic-bezier(.22,.61,.24,1); }
+  .osk.show { opacity:1; pointer-events:auto; transform:translate(-50%,0); }
+  .osk-row { display:flex; gap:10px; margin-top:10px; } .osk-row:first-child { margin-top:0; }
+  .osk-key { flex:1 1 0; height:74px; border-radius:14px; background:#2a2a33; color:#eee; font-size:32px; font-weight:500; display:flex; align-items:center; justify-content:center;
+             cursor:pointer; transition:transform .1s, background .1s, box-shadow .1s; user-select:none; }
+  .osk-key.fn { background:#1d1d24; font-size:24px; color:#cfcfd6; }
+  .osk-key.ok { background:var(--accent); color:#fff; }
+  .osk-key.on { background:#3b3b48; color:#fff; }
+  .osk-key.focus { background:#fff; color:#111; transform:scale(1.07); box-shadow:0 8px 22px rgba(0,0,0,.5); }
+  .osk-key.ok.focus { background:#fff; color:var(--accent); }
+  .osk-hint { display:flex; gap:30px; justify-content:center; margin-top:14px; font-size:20px; color:#b9b9c2; }
+  .osk-hint span { display:flex; align-items:center; gap:9px; } .osk-hint span.dim { color:#77777f; }
+  .osk-hint span.flash { color:#fff; animation:oskfl .7s ease 3; } @keyframes oskfl { 50% { transform:scale(1.18); } }
+  .osk-hint i { width:16px; height:16px; border-radius:50%; display:inline-block; }
+  .osk-key svg { width:40px; height:28px; flex:0 0 auto; }
+  .osk-key.caps { background:#fff; color:#111; }
+  .osk-view { position:fixed; z-index:61; pointer-events:none; display:none; align-items:center; overflow:hidden; color:#fff; white-space:pre; box-sizing:border-box; }
+  .osk-tx { display:inline-block; white-space:pre; }
+  .osk-caret { display:inline-block; width:3px; height:1.15em; background:#fff; vertical-align:middle; margin:0 1px; animation:oskb 1s steps(1) infinite; }
+  @keyframes oskb { 50% { opacity:0; } }
+  .osk-target { border-color:#fff !important; box-shadow:0 0 0 3px rgba(255,255,255,.25); }
+  body.osk-on #modal { align-items:flex-start; padding-top:110px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="ttl"><i id="appico"></i>Файли</div>
+    <div class="crumb" id="crumb"></div>
+    <div class="space" id="space"></div>
+  </header>
+  <div class="body">
+    <div class="side" id="side"></div>
+    <div class="listwrap">
+      <div class="listhead"><div class="c1">Назва</div><div class="c2">Розмір</div><div class="c3">Змінено</div></div>
+      <div class="list" id="list"><div class="rows" id="rows"></div></div>
+    </div>
+    <div class="pane">
+      <div class="thumb" id="thumb"></div>
+      <div class="meta" id="meta"></div>
+    </div>
+  </div>
+  <footer id="footer"></footer>
+</div>
+
+<div id="pv"><img id="pvimg" alt=""><div class="spin"></div>
+  <div class="nav l" data-act="prev">‹</div><div class="nav r" data-act="next">›</div>
+  <div class="bar"><div class="t"><b id="pvname"></b><span id="pvinfo"></span></div><div id="pvkeys" style="display:flex;gap:12px"></div></div>
+</div>
+<div id="vp"><video id="vpv" preload="auto"></video><div class="spin"></div>
+  <div class="err" id="vperr"></div>
+  <div class="top" id="vptop"></div>
+  <div class="osd" id="vposd"></div>
+  <div class="ov">
+    <div class="prog" id="vpprog"><div class="buf"></div><div class="cur"></div><div class="knob"></div></div>
+    <div class="ctl"><div class="pp" data-act="vpp" id="vppp"></div><div class="tm" id="vptm">0:00 / 0:00</div><div class="sp"></div>
+      <div class="hint"><kbd>OK</kbd>пауза<kbd>◀ ▶</kbd>±10 с<kbd>▲ ▼</kbd>±1 хв<kbd>CH ±</kbd>інше відео<kbd>BACK</kbd>закрити</div></div>
+  </div>
+</div>
+<div id="ap"><audio id="apa" preload="auto"></audio>
+  <div class="art"><div class="disc"><i id="apico"></i></div><div class="tt" id="aptt"></div><div class="ts" id="apts"></div>
+    <div class="prog" id="approg"><div class="buf"></div><div class="cur"></div><div class="knob"></div></div>
+    <div class="ctl"><div class="pp" data-act="app" id="appp"></div><div class="tm" id="aptm">0:00 / 0:00</div></div>
+  </div>
+  <div class="pl"><h3 id="aph"></h3><div class="plist" id="aplist"><div class="plrows" id="aprows"></div></div>
+    <div class="hint2"><kbd>OK</kbd>пауза / грати вибраний<kbd>▲ ▼</kbd>список<kbd>◀ ▶</kbd>±10 с<kbd>CH ±</kbd>трек<kbd>BACK</kbd>закрити</div></div>
+</div>
+<div id="modal"><div class="dlg" id="dlg"></div></div>
+<div id="toast"></div>
+<div id="boot"><div class="spin2"></div><div id="bootmsg">Запускаю службу файлів…</div><small id="bootsub"></small></div>
+
+<script>
+  // ---- interface language (chosen in the hub: settings category "myhome", key "uiLang"). Dictionary keys = Ukrainian text;
+  // L(s) = translation or s. Translations: i18n/<lang>.json next to this page (source: i18n/<app>/ in the project).
+  // our apps may NOT read settings (settingsservice → Access denied for com.user.*), so a root daemon on the TV
+  // (deploy/poweron/poweron-home.sh) writes the hub's choice into i18n/current.json next to each app
+  function curLang(){ try{ var x=new XMLHttpRequest(); x.open('GET','i18n/current.json',false); x.send(); return (JSON.parse(x.responseText)||{}).lang||null; }catch(e){ return null; } }
+  var UILANG=(function(){ var c=curLang(); if(c){ try{ localStorage.setItem('uiLang',c); }catch(e){} return c; } try{ return localStorage.getItem('uiLang')||'uk'; }catch(e){ return 'uk'; } })(), DICT=null;
+  if(UILANG!=='uk'){ try{ var lx=new XMLHttpRequest(); lx.open('GET','i18n/'+UILANG+'.json',false); lx.send(); if(lx.responseText) DICT=JSON.parse(lx.responseText); }catch(e){ DICT=null; } }
+  function L(s){ return (DICT && DICT[s]) || s; }
+  (function(){ if(!DICT || !document.body) return; document.documentElement.lang=UILANG;
+    var w=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false), n, list=[];
+    while((n=w.nextNode())) list.push(n);
+    list.forEach(function(t){ var v=t.nodeValue, k=v.replace(/\s+/g,' ').trim(); if(k && DICT[k]) t.nodeValue=v.replace(k, DICT[k]); });
+    [].forEach.call(document.querySelectorAll('[placeholder],[title]'), function(el){ ['placeholder','title'].forEach(function(a){ var v=el.getAttribute(a); if(v && DICT[v.trim()]) el.setAttribute(a, DICT[v.trim()]); }); });
+  })();
+  // language changed while this app was in the background → reload once when it comes back
+  function langCheck(){ var c=curLang(); if(c && c!==UILANG){ try{ localStorage.setItem('uiLang',c); }catch(e){} location.reload(); } }
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) langCheck(); });
+  document.addEventListener('webOSRelaunch', langCheck);
+(function () {
+'use strict';
+var API = 'http://127.0.0.1:7655';
+var KEY = { LEFT:37, UP:38, RIGHT:39, DOWN:40, OK:13, BACK:461, RED:403, GREEN:404, YELLOW:405, BLUE:406, PGUP:33, PGDN:34,
+  PLAY:415, PAUSE:19, STOP:413, RW:412, FF:417, PLAYPAUSE:179 };
+var ICON = {
+  app:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h4.2l2 2.2h6.8A2.5 2.5 0 0 1 21 8.7v8.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>',
+  dir:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h4.2l2 2.2h6.8A2.5 2.5 0 0 1 21 8.7v8.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>',
+  img:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="9.5" r="1.8"/><path d="M4 18l5-5 3.5 3.5L16 13l4 4"/></svg>',
+  file:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg>',
+  walls:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="5" width="15" height="12" rx="2"/><path d="M6.5 19.5h13a2 2 0 0 0 2-2v-9"/><path d="M3.5 15l4-4 3 3 2.5-2.5 3.5 3.5"/></svg>',
+  usb:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="9" width="10" height="13" rx="2"/><path d="M9 9V3h6v6"/><path d="M10.5 5.5h.01M13.5 5.5h.01"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/><path d="M10 11v5.5M14 11v5.5"/></svg>',
+  dev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><path d="M7 7h.01M7 17h.01"/></svg>',
+  root:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>',
+  video:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M10 9.2v5.6l4.8-2.8z" fill="currentColor"/></svg>',
+  audio:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5.5l11-2v12.5"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>',
+  play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12.5-7.5z"/></svg>',
+  pause:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
+};
+var $ = function (id) { return document.getElementById(id); };
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+function fmtSize(n) { if (n == null) return ''; var u = [L('Б'),L('КБ'),L('МБ'),L('ГБ'),L('ТБ')], i = 0; while (n >= 1024 && i < 4) { n /= 1024; i++; } return (i ? n.toFixed(n < 10 ? 1 : 0) : n) + ' ' + u[i]; }
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function fmtDate(ms) { if (!ms) return ''; var d = new Date(ms); return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+// forms: a = one, b = few (2–4), c = many. uk/ru/pl use all three; other languages: one (a) or many (c)
+function plural(n, a, b, c) { var m10 = n % 10, m100 = n % 100;
+  if (UILANG !== 'uk' && UILANG !== 'ru' && UILANG !== 'pl') return n + ' ' + (n === 1 ? a : c);
+  return n + ' ' + (m10 === 1 && m100 !== 11 ? a : (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? b : c)); }
+function fileUrl(p) { return API + '/api/file?path=' + encodeURIComponent(p); }
+function localUrl(p) { return 'file://' + p.split('/').map(encodeURIComponent).join('/'); }
+function iconOf(e) { return e.type === 'dir' ? ICON.dir : e.image ? ICON.img : e.kind === 'video' ? ICON.video : e.kind === 'audio' ? ICON.audio : ICON.file; }
+function fmtTime(t) { if (!isFinite(t) || t < 0) t = 0; t = Math.floor(t); var h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s = t % 60; return (h ? h + ':' + pad(m) : m) + ':' + pad(s); }
+function dirOf(p) { var i = p.lastIndexOf('/'); return i > 0 ? p.slice(0, i) : '/'; }
+
+function api(method, url, body) {
+  return new Promise(function (res, rej) {
+    var x = new XMLHttpRequest();
+    x.open(method, API + url, true);
+    x.timeout = method === 'POST' ? 10 * 60 * 1000 : 15000;
+    if (method === 'POST') { x.setRequestHeader('Content-Type', 'application/json'); x.setRequestHeader('X-Explorer', '1'); }
+    x.onload = function () { var j = {}; try { j = JSON.parse(x.responseText || '{}'); } catch (e) {} if (x.status >= 200 && x.status < 300) res(j); else rej(new Error(j.error ? L(j.error) : ('HTTP ' + x.status))); };   // server messages are Ukrainian → translate
+    x.onerror = x.ontimeout = function () { rej(new Error(L('немає звʼязку зі службою'))); };
+    x.send(body ? JSON.stringify(body) : null);
+  });
+}
+
+// ---------- backend bootstrap (root server via Homebrew Channel exec + systemd-run) ----------
+function luna(uri, params) {
+  return new Promise(function (res, rej) {
+    try {
+      var b = new PalmServiceBridge();
+      window._lunaKeep = (window._lunaKeep || []).concat(b);
+      b.onservicecallback = function (s) { try { res(JSON.parse(s)); } catch (e) { rej(e); } };
+      b.call(uri, JSON.stringify(params || {}));
+    } catch (e) { rej(e); }
+  });
+}
+function appDir() { var p = decodeURIComponent(location.pathname); return p.slice(0, p.lastIndexOf('/')); }
+function startServer() {
+  var js = appDir() + '/server.js';
+  var cmd = 'systemctl stop myhome-explorer 2>/dev/null; systemctl reset-failed myhome-explorer 2>/dev/null; ' +
+    'systemd-run --unit=myhome-explorer --description="Files app backend" node \'' + js.replace(/'/g, '') + '\'';
+  return luna('luna://org.webosbrew.hbchannel.service/exec', { command: cmd });
+}
+function ensureServer() {
+  return api('GET', '/api/ping').catch(function () {
+    return startServer().then(function (r) {
+      if (r && r.returnValue === false) throw new Error(r.errorText || L('exec відмовив'));
+      var t0 = Date.now();
+      return new Promise(function (res, rej) {
+        (function poll() {
+          api('GET', '/api/ping').then(res, function () { if (Date.now() - t0 > 12000) rej(new Error(L('служба не відповідає'))); else setTimeout(poll, 400); });
+        })();
+      });
+    });
+  });
+}
+
+// ---------- state ----------
+var S = { zone:'list', places:[], side:0, sel:0, path:null, view:'fs', search:null, searchBack:null, vpList:[], vpIdx:0, apList:[], apIdx:0, apF:0, data:null, entries:[], idx:0, marked:{}, pvList:[], pvIdx:0, modal:null, sort:'name' };
+
+function buildPlaces(p) {
+  var out = [{ id:'walls', icon:'walls', title:L('Шпалери'), sub:plural(p.walls.count, L('зображення'), L('зображення​'), L('зображень')) + (p.walls.df ? L(' · вільно ') + fmtSize(p.walls.df.free) : ''), path:p.walls.path }];
+  if (p.usb.length) p.usb.forEach(function (u) { out.push({ id:'usb:' + u.path, icon:'usb', title:u.label || 'USB', sub:'USB · ' + u.path, path:u.path }); });
+  else out.push({ id:'nousb', icon:'usb', title:L('USB-накопичувач'), sub:L('не підключено'), off:true });
+  out.push({ id:'trash', icon:'trash', title:L('Кошик'), sub:p.trash.count ? plural(p.trash.count, L('файл'), L('файли'), L('файлів')) + ' · ' + fmtSize(p.trash.size) : L('порожній'), view:'trash' });
+  out.push({ id:'dev', icon:'dev', title:L('Памʼять розробника'), sub:'/media/developer', path:'/media/developer' });
+  out.push({ id:'root', icon:'root', title:L('Уся система'), sub:L('/ · лише перегляд'), path:'/' });
+  return out;
+}
+function renderSide() {
+  var h = L('<h3>Місця</h3>');
+  S.places.forEach(function (pl, i) {
+    var active = (pl.view === 'trash' && S.view === 'trash') || (S.view === 'fs' && pl.path && S.path && (S.path === pl.path || (pl.path !== '/' && S.path.indexOf(pl.path + '/') === 0)) && !S.places.some(function (o) { return o !== pl && o.path && o.path.length > pl.path.length && (S.path === o.path || S.path.indexOf(o.path + '/') === 0); }));
+    h += '<div class="place' + (active ? ' sel' : '') + (pl.off ? ' off' : '') + (S.zone === 'side' && S.side === i ? ' focus' : '') + '" data-side="' + i + '"><i>' + ICON[pl.icon] + '</i><div class="pn"><div>' + esc(pl.title) + '</div><div>' + esc(pl.sub) + '</div></div></div>';
+  });
+  $('side').innerHTML = h;
+}
+function refreshPlaces(quiet) {
+  return api('GET', '/api/places').then(function (p) {
+    var before = S.places.filter(function (x) { return x.icon === 'usb' && !x.off; }).map(function (x) { return x.id; });
+    S.places = buildPlaces(p);
+    var after = S.places.filter(function (x) { return x.icon === 'usb' && !x.off; });
+    if (quiet) after.forEach(function (u) { if (before.indexOf(u.id) < 0) toast(L('Підключено USB: ') + u.title); });
+    if (S.side >= S.places.length) S.side = S.places.length - 1;
+    S.wallsDf = p.walls.df;
+    renderSide(); renderHeader();
+    // the folder we are in disappeared (USB pulled out)
+    if (quiet && S.view === 'fs' && S.path && S.path.indexOf('/tmp/usb/') === 0 && !after.some(function (u) { return S.path.indexOf(u.path) === 0; })) {
+      toast(L('USB відключено')); openPath(S.places[0].path);
+    }
+  });
+}
+
+function sortEntries(a) {
+  var k = S.sort;
+  return a.slice().sort(function (x, y) {
+    var dx = x.type === 'dir' ? 0 : 1, dy = y.type === 'dir' ? 0 : 1;
+    if (dx !== dy) return dx - dy;
+    if (k === 'date') return (y.mtime || 0) - (x.mtime || 0);
+    if (k === 'size') return (y.size || 0) - (x.size || 0);
+    return x.name.localeCompare(y.name);
+  });
+}
+
+function openPath(p, focusName) {
+  return api('GET', '/api/list?path=' + encodeURIComponent(p)).then(function (d) {
+    S.view = 'fs'; S.path = d.path; S.data = d; S.marked = {};
+    S.entries = sortEntries(d.entries.filter(function (e) { return e.name.charAt(0) !== '.' || e.name === '..'; }).map(function (e) {
+      e.path = (d.path === '/' ? '' : d.path) + '/' + e.name; return e; }));
+    var fi = focusName ? S.entries.findIndex(function (e) { return e.name === focusName; }) : -1;
+    S.idx = fi >= 0 ? fi : 0;
+    renderAll();
+  }).catch(function (e) { toast(L('Не вдалося відкрити: ') + e.message); });
+}
+function openTrash() {
+  return api('GET', '/api/trash').then(function (d) {
+    S.view = 'trash'; S.path = null; S.marked = {};
+    S.data = { writable:true, isTrash:true };
+    S.entries = d.items.map(function (t) { return { name:t.name, path:t.path, orig:t.orig, size:t.size, mtime:t.deleted, type:t.dir ? 'dir' : 'file', image:t.image }; });
+    S.idx = Math.min(S.idx, Math.max(0, S.entries.length - 1));
+    renderAll();
+  });
+}
+function reload(focusName) { return S.view === 'trash' ? openTrash() : openPath(S.path, focusName); }
+
+function renderHeader() {
+  if (S.view === 'trash') { $('crumb').innerHTML = L('<b>Кошик</b>'); }
+  else if (S.view === 'search') { $('crumb').innerHTML = L('&#x202A;<b>Пошук: «') + esc(S.search.q) + '»</b> · ' + plural(S.entries.length, L('збіг'), L('збіги'), L('збігів')) + (S.search.truncated ? L(' (показано перші)') : '') + '&#x202C;'; }
+  else if (S.path) { var parts = S.path.split('/').filter(Boolean); $('crumb').innerHTML = '&#x202A;/' + parts.map(function (x, i) { return i === parts.length - 1 ? '<b>' + esc(x) + '</b>' : esc(x); }).join(' / ') + '&#x202C;'; }
+  $('space').textContent = S.wallsDf ? L('Памʼять ТВ: вільно ') + fmtSize(S.wallsDf.free) + L(' з ') + fmtSize(S.wallsDf.total) : '';
+}
+function rowHtml(e, i) {
+  var cls = 'row' + (e.type === 'dir' ? ' dir' : '') + (e.image ? ' img' : '') + (e.kind === 'video' ? ' vid' : e.kind === 'audio' ? ' aud' : '') + (S.marked[e.path] ? ' marked' : '') + (S.zone === 'list' && i === S.idx ? ' focus' : '');
+  var ic = iconOf(e);
+  var sub = S.view === 'trash' && e.orig ? '<small>' + esc(e.orig.replace(/\/[^/]*$/, '')) + '</small>' :
+    S.view === 'search' ? '<small class="where">' + esc(e.dir) + '</small>' : (e.link ? L('<small>→ посилання</small>') : '');
+  return '<div class="' + cls + '" data-row="' + i + '"><span class="mk"></span><i>' + ic + '</i><div class="nm">' + esc(e.name) + sub + '</div>' +
+    '<div class="sz">' + (e.type === 'dir' ? '' : fmtSize(e.size)) + '</div><div class="dt">' + fmtDate(e.mtime) + '</div></div>';
+}
+function renderList() {
+  var r = $('rows');
+  if (!S.entries.length) { r.innerHTML = '<div class="empty">' + (S.view === 'trash' ? L('Кошик порожній') : S.view === 'search' ? L('Нічого не знайдено в шпалерах і на USB') : L('Папка порожня')) + '</div>'; r.style.transform = ''; return; }
+  r.innerHTML = S.entries.map(rowHtml).join('');
+  scrollList();
+}
+function scrollList() {
+  var rowH = 70, vis = Math.floor($('list').clientHeight / rowH);
+  var top = Math.max(0, Math.min(S.idx - Math.floor(vis / 2), S.entries.length - vis));
+  $('rows').style.transform = 'translateY(' + (-Math.max(0, top) * rowH) + 'px)';
+}
+function updateFocusRow(prev) {
+  var rows = $('rows').children;
+  if (rows[prev]) rows[prev].classList.remove('focus');
+  if (rows[S.idx] && S.zone === 'list') rows[S.idx].classList.add('focus');
+  scrollList(); renderPane(); renderFooter();
+}
+var thumbT = null;
+function renderPane() {
+  var e = S.entries[S.idx], th = $('thumb'), m = $('meta');
+  clearTimeout(thumbT);
+  if (!e) { th.innerHTML = '<i>' + ICON.dir + '</i>'; m.innerHTML = ''; return; }
+  th.innerHTML = '<i>' + iconOf(e) + '</i>';
+  var info = '<b>' + esc(e.name) + '</b>';
+  if (e.type !== 'dir') info += fmtSize(e.size) + '<br>';
+  if (e.mtime) info += (S.view === 'trash' ? L('Видалено: ') : L('Змінено: ')) + fmtDate(e.mtime) + '<br>';
+  if (S.view === 'trash' && e.orig) info += L('Звідки: ') + esc(e.orig) + '<br>';
+  if (S.view === 'search') info += L('Папка: ') + esc(e.dir) + '<br>';
+  if (e.kind === 'video') info += L('<span style="color:#c58cff">Відео · OK — дивитися</span><br>');
+  if (e.kind === 'audio') info += L('<span style="color:#3ccf9a">Аудіо · OK — слухати всю папку</span><br>');
+  info += '<span id="dims"></span>';
+  if (S.view === 'fs' && S.data && !S.data.writable) info += '<div style="margin-top:14px"><span class="lock">' + ICON.lock + L('Системна папка — лише перегляд</span></div>');
+  m.innerHTML = info;
+  if (e.image) {
+    var path = e.path;
+    thumbT = setTimeout(function () {
+      var im = new Image();
+      im.onload = function () { if (S.entries[S.idx] && S.entries[S.idx].path === path) { th.innerHTML = ''; im.className = 'ok'; th.appendChild(im); var d = $('dims'); if (d) d.textContent = im.naturalWidth + ' × ' + im.naturalHeight + L(' пікс.'); } };
+      im.src = fileUrl(path);
+    }, 280);
+  }
+}
+function targets() {
+  var k = Object.keys(S.marked);
+  if (k.length) return S.entries.filter(function (e) { return S.marked[e.path]; });
+  return S.entries[S.idx] ? [S.entries[S.idx]] : [];
+}
+function canDelete() { return S.data && S.data.writable && targets().length > 0; }
+function canImport() { return S.view === 'fs' && S.data && !S.data.isWalls && targets().some(function (e) { return e.image; }); }
+function keyHtml(cls, label, act, dis) { return '<div class="key' + (dis ? ' dis' : '') + '" data-act="' + act + '"><s class="' + cls + '"></s>' + label + '</div>'; }
+// у «Місцях» стаємо на місце, де ми зараз (найдовший збіг шляху), а не завжди на перше
+function activeSide() {
+  if (S.view === 'trash') { for (var t = 0; t < S.places.length; t++) if (S.places[t].view === 'trash') return t; }
+  var best = S.side, bl = -1;
+  S.places.forEach(function (pl, i) { if (pl.path && S.path && (S.path === pl.path || S.path.indexOf(pl.path === '/' ? '/' : pl.path + '/') === 0) && pl.path.length > bl) { bl = pl.path.length; best = i; } });
+  return best;
+}
+function sidePlace() { return S.zone === 'side' ? S.places[S.side] : null; }
+function isStick(pl) { return pl && pl.icon === 'usb' && !pl.off && pl.path; }
+function renderFooter() {
+  var h, n = Object.keys(S.marked).length;
+  if (isStick(sidePlace())) { $('footer').innerHTML = keyHtml('r', L('Безпечно вийняти'), 'eject') + L('<div class="key" data-act="back"><kbd>BACK</kbd>Назад</div><div class="sp"></div>'); return; }
+  if (S.view === 'trash') {
+    h = keyHtml('r', L('Видалити назавжди'), 'del', !S.entries.length) + keyHtml('g', L('Відновити'), 'restore', !S.entries.length) + keyHtml('y', L('Позначити'), 'mark', !S.entries.length) + keyHtml('b', L('Меню'), 'menu');
+  } else {
+    h = keyHtml('r', L('Видалити'), 'del', !canDelete()) + keyHtml('g', L('У шпалери'), 'import', !canImport()) + keyHtml('y', L('Позначити'), 'mark', !S.entries.length) + keyHtml('b', L('Меню'), 'menu');
+  }
+  h += L('<div class="key" data-act="back"><kbd>BACK</kbd>Назад</div><div class="sp"></div><div class="info">') +
+    (n ? L('Позначено: ') + n + ' · ' : '') + (S.entries.length ? (S.idx + 1) + ' / ' + S.entries.length : '') + '</div>';
+  $('footer').innerHTML = h;
+}
+function renderAll() { renderSide(); renderHeader(); renderList(); renderPane(); renderFooter(); }
+
+// ---------- toast & dialogs ----------
+var toastT = null;
+function toast(msg, ms) { var t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('on'); }, ms || 3200); }
+function dialog(title, text, buttons, focusIdx, col) {
+  S.modal = { buttons:buttons, f:focusIdx || 0, last:focusIdx || 0, prevZone:S.zone };
+  S.zone = 'modal';
+  $('dlg').innerHTML = '<h2>' + esc(title) + '</h2>' + (text ? '<p>' + esc(text) + '</p>' : '') + '<div class="btns' + (col ? ' col' : '') + '">' +
+    buttons.map(function (b, i) { return '<div class="btn' + (b.danger ? ' danger' : '') + '" data-btn="' + i + '">' + esc(b.label) + '</div>'; }).join('') + '</div>';
+  $('modal').classList.add('on'); paintModal();
+}
+function paintModal() { var bs = $('dlg').querySelectorAll('.btn'); for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('focus', i === S.modal.f); }
+function closeModal() { if (window.osk) osk.hide(); if (!S.modal) return; S.zone = S.modal.prevZone; S.modal = null; $('modal').classList.remove('on'); }
+// клік повз вікно = закрити меню (але не підтвердження видалення й не вікно з полем введення)
+$('modal').addEventListener('click', function (ev) {
+  if (ev.target !== $('modal') || !S.modal || $('dlg').querySelector('input')) return;
+  var danger = S.modal.buttons.some(function (b) { return b.danger; }), cancel = S.modal.buttons.some(function (b) { return b.label === L('Скасувати'); });
+  if (danger && cancel) return;
+  closeModal();
+});
+function pressModal(i) { var b = S.modal.buttons[i]; closeModal(); if (b && b.fn) b.fn(); }
+
+// ---------- actions ----------
+function doDelete() {
+  var t = targets(); if (!t.length) return;
+  var perm = S.view === 'trash' || (S.data && S.data.isTrash);
+  if (!perm && !canDelete()) { toast(L('Тут видаляти не можна — системна папка')); return; }
+  var what = t.length === 1 ? '«' + t[0].name + '»' + (t[0].type === 'dir' ? L(' (папку з усім вмістом)') : '') : plural(t.length, L('обʼєкт'), L('обʼєкти'), L('обʼєктів'));
+  var text = perm ? what + L(' буде видалено НАЗАВЖДИ. Це не можна скасувати.') :
+    what + L(' буде переміщено в Кошик. Звідти можна відновити.') + (S.data.isWalls ? L('\nСписок заставки (walls.json) оновиться.') : '');
+  dialog(perm ? L('Видалити назавжди?') : L('Видалити?'), text, [
+    { label:L('Скасувати') },
+    { label:perm ? L('Видалити назавжди') : L('Видалити'), danger:true, fn:function () {
+      var keepIdx = S.idx;
+      api('POST', '/api/delete', { paths:t.map(function (e) { return e.path; }) }).then(function (r) {
+        var msg = L('Видалено: ') + r.done.length + (r.failed.length ? L(', помилки: ') + r.failed.length + ' (' + L(r.failed[0].error) + ')' : '');
+        if (r.wallsCount != null) msg += L(' · у шпалерах тепер ') + r.wallsCount;
+        toast(msg, 4500);
+        S.idx = keepIdx;
+        return reload().then(function () { S.idx = Math.min(keepIdx, Math.max(0, S.entries.length - 1)); renderAll(); return refreshPlaces(); });
+      }).catch(function (e) { toast(L('Помилка: ') + e.message); });
+    } }
+  ], 0);
+}
+function doRestore(all) {
+  var t = all ? S.entries : targets(); if (!t.length) return;
+  api('POST', '/api/restore', { paths:t.map(function (e) { return e.path; }) }).then(function (r) {
+    toast(L('Відновлено: ') + r.done.length + (r.failed.length ? L(', помилки: ') + r.failed.length : '') + (r.wallsCount != null ? L(' · у шпалерах ') + r.wallsCount : ''), 4500);
+    return openTrash().then(refreshPlaces);
+  }).catch(function (e) { toast(L('Помилка: ') + e.message); });
+}
+function doEmptyTrash() {
+  dialog(L('Очистити кошик?'), L('Усі файли в кошику буде видалено назавжди.'), [
+    { label:L('Скасувати') },
+    { label:L('Очистити'), danger:true, fn:function () { api('POST', '/api/trash/empty').then(function (r) { toast(L('Видалено назавжди: ') + r.removed); return openTrash().then(refreshPlaces); }).catch(function (e) { toast(L('Помилка: ') + e.message); }); } }
+  ], 0);
+}
+function doImport(list) {
+  var imgs = (list || targets()).filter(function (e) { return e.image; });
+  if (!imgs.length) { toast(L('Немає зображень для імпорту')); return; }
+  var done = 0, skipped = 0, failed = 0, i = 0, last = null;
+  S.busy = true;
+  (function next() {
+    if (i >= imgs.length) {
+      S.busy = false;
+      toast(L('Скопійовано в шпалери: ') + done + (skipped ? L(', пропущено: ') + skipped : '') + (failed ? L(', помилки: ') + failed : '') + (last != null ? L(' · усього ') + last : ''), 5000);
+      S.marked = {}; renderAll(); refreshPlaces(); if (done) setTimeout(function () { screenCopies(false); }, 1500); return;
+    }
+    toast(L('Копіюю ') + (i + 1) + L(' з ') + imgs.length + ': ' + imgs[i].name, 60000);
+    api('POST', '/api/import', { paths:[imgs[i].path] }).then(function (r) {
+      done += r.done.length; skipped += r.skipped.length; failed += r.failed.length; if (r.wallsCount != null) last = r.wallsCount;
+    }).catch(function () { failed++; }).then(function () { i++; next(); });
+  })();
+}
+// Копії під екран для заставки: великі шпалери (8K–12K) у слайдшоу забивали памʼять ТВ → аварійні перезавантаження.
+// Сервер каже, яким шпалерам потрібна копія; масштабуємо тут (браузер уміє), по одній, і віддаємо серверу JPEG.
+var screenBusy = false;
+function screenCopies(quiet) {
+  if (screenBusy) return Promise.resolve(); screenBusy = true;
+  return api('GET', '/api/screen-todo').then(function (r) {
+    var todo = (r && r.todo) || [], k = 0;
+    if (todo.length && !quiet) toast(L('Готую ') + plural(todo.length, L('копію'), L('копії'), L('копій')) + L(' для заставки…'), 8000);
+    return (function one() {
+      if (k >= todo.length) return Promise.resolve(k);
+      var t = todo[k++];
+      return fetch(API + '/api/file?path=' + encodeURIComponent(t.path)).then(function (x) { return x.blob(); })
+        .then(function (b) { return createImageBitmap(b, { resizeWidth: t.w, resizeHeight: t.h, resizeQuality: 'high' }); })
+        .then(function (bmp) {
+          var c = document.createElement('canvas'); c.width = t.w; c.height = t.h;
+          c.getContext('2d').drawImage(bmp, 0, 0); try { bmp.close(); } catch (e) {}
+          return new Promise(function (res) { c.toBlob(res, 'image/jpeg', 0.92); }).then(function (jpg) { c.width = c.height = 1; return jpg; });
+        })
+        .then(function (jpg) {
+          return new Promise(function (res, rej) {
+            var x = new XMLHttpRequest(); x.open('POST', API + '/api/screen-copy?name=' + encodeURIComponent(t.name), true);
+            x.setRequestHeader('X-Explorer', '1'); x.setRequestHeader('Content-Type', 'image/jpeg'); x.timeout = 60000;
+            x.onload = function () { x.status < 300 ? res() : rej(new Error('HTTP ' + x.status)); }; x.onerror = x.ontimeout = function () { rej(new Error(L('мережа'))); };
+            x.send(jpg);
+          });
+        })
+        .catch(function (e) { try { api('POST', '/api/log', { screenCopy: t.name, error: String(e && e.message || e) }); } catch (_) {} })
+        .then(one);
+    })();
+  }).catch(function () {}).then(function (n) { screenBusy = false; return n; });
+}
+
+function confirmImport(list) {
+  var imgs = (list || targets()).filter(function (e) { return e.image; });
+  if (!imgs.length) { toast(L('Немає зображень для імпорту')); return; }
+  dialog(L('Скопіювати в шпалери?'), (imgs.length === 1 ? '«' + imgs[0].name + '»' : plural(imgs.length, L('зображення'), L('зображення​'), L('зображень'))) +
+    ' (' + fmtSize(imgs.reduce(function (a, e) { return a + (e.size || 0); }, 0)) + L(') буде скопійовано в папку шпалер і додано до заставки.'), [
+    { label:L('Скасувати') }, { label:L('Копіювати'), fn:function () { doImport(imgs); } }
+  ], 1);
+}
+function toggleMark() {
+  var e = S.entries[S.idx]; if (!e) return;
+  if (S.marked[e.path]) delete S.marked[e.path]; else S.marked[e.path] = 1;
+  var prev = S.idx; if (S.idx < S.entries.length - 1) S.idx++;
+  var rows = $('rows').children; if (rows[prev]) rows[prev].classList.toggle('marked', !!S.marked[e.path]);
+  updateFocusRow(prev);
+}
+function menu() {
+  var b = [];
+  if (S.view === 'trash') {
+    b.push({ label:L('Пошук файлів…'), fn:function () { setTimeout(searchDialog, 0); } });
+    if (S.entries.length) { b.push({ label:L('Відновити все'), fn:function () { doRestore(true); } }); b.push({ label:L('Очистити кошик'), danger:true, fn:doEmptyTrash }); }
+  } else {
+    var imgs = S.entries.filter(function (e) { return e.image; });
+    if (!S.data.isWalls && imgs.length) b.push({ label:L('Скопіювати всі зображення папки в шпалери (') + imgs.length + ')', fn:function () { confirmImport(imgs); } });
+    b.push({ label:L('Пошук файлів…'), fn:function () { setTimeout(searchDialog, 0); } });
+    b.push({ label:L('Позначити все'), fn:function () { S.entries.forEach(function (e) { S.marked[e.path] = 1; }); renderAll(); } });
+    if (Object.keys(S.marked).length) b.push({ label:L('Зняти позначки'), fn:function () { S.marked = {}; renderAll(); } });
+    b.push({ label:L('Сортувати: ') + ({ name:L('за назвою'), date:L('за датою'), size:L('за розміром') })[S.sort] + L(' → змінити'), fn:function () {
+      S.sort = S.sort === 'name' ? 'date' : S.sort === 'date' ? 'size' : 'name'; S.entries = sortEntries(S.entries); S.idx = 0; renderAll(); toast(L('Сортування: ') + ({ name:L('за назвою'), date:L('за датою'), size:L('за розміром') })[S.sort]); } });
+    if (S.view === 'search') b.push({ label:L('Закрити пошук'), fn:goBack });
+    if (S.data.isWalls) b.push({ label:L('Перебудувати список заставки (walls.json)'), fn:function () { api('POST', '/api/sync-walls').then(function (r) { toast('walls.json: ' + r.wallsCount + L(' зображень')); }); } });
+  }
+  S.places.filter(isStick).forEach(function (pl) { b.push({ label:L('Безпечно вийняти «') + pl.title + '»', fn:function () { ejectPlace(pl); } }); });
+  b.push({ label:L('Оновити'), fn:function () { reload(); refreshPlaces(); } });
+  b.push({ label:L('Закрити') });
+  dialog(L('Меню'), '', b, 0, true);
+}
+
+// ---------- preview ----------
+var pvHideT = null;
+function pvOpen() {
+  S.pvList = S.entries.filter(function (e) { return e.image; });
+  S.pvIdx = S.pvList.indexOf(S.entries[S.idx]);
+  if (S.pvIdx < 0) return;
+  S.zone = 'preview'; $('pv').classList.add('on'); pvShow();
+}
+function pvShow() {
+  var e = S.pvList[S.pvIdx]; if (!e) return pvClose();
+  var pv = $('pv'), im = $('pvimg');
+  pv.classList.add('loading');
+  im.onload = function () { pv.classList.remove('loading'); $('pvinfo').textContent = (S.pvIdx + 1) + ' / ' + S.pvList.length + ' · ' + im.naturalWidth + '×' + im.naturalHeight + ' · ' + fmtSize(e.size); };
+  im.onerror = function () { pv.classList.remove('loading'); $('pvinfo').textContent = L('не вдалося показати'); };
+  im.src = fileUrl(e.path);
+  $('pvname').textContent = e.name;
+  $('pvinfo').textContent = (S.pvIdx + 1) + ' / ' + S.pvList.length + ' · ' + fmtSize(e.size);
+  var del = S.view === 'trash' || (S.data && S.data.writable), imp = S.view === 'fs' && S.data && !S.data.isWalls;
+  $('pvkeys').innerHTML = (del ? keyHtml('r', S.view === 'trash' ? L('Видалити назавжди') : L('Видалити'), 'del') : '') + (imp ? keyHtml('g', L('У шпалери'), 'import') : '') +
+    (S.view === 'trash' ? keyHtml('g', L('Відновити'), 'restore') : '') + L('<div class="key" data-act="back"><kbd>BACK</kbd>Закрити</div>');
+  // keep list focus in sync so actions apply to the shown image
+  S.idx = S.entries.indexOf(e); S.marked = {};
+  pvWake();
+}
+function pvWake() { var pv = $('pv'); pv.classList.remove('hide'); clearTimeout(pvHideT); pvHideT = setTimeout(function () { pv.classList.add('hide'); }, 4000); }
+function pvClose() { $('pv').classList.remove('on'); $('pvimg').removeAttribute('src'); S.zone = 'list'; renderList(); renderPane(); renderFooter(); }
+function pvStep(d) { if (!S.pvList.length) return; S.pvIdx = (S.pvIdx + d + S.pvList.length) % S.pvList.length; pvShow(); }
+function pvDelete() {
+  var e = S.pvList[S.pvIdx]; if (!e) return;
+  S.idx = S.entries.indexOf(e); S.marked = {};
+  var perm = S.view === 'trash';
+  dialog(perm ? L('Видалити назавжди?') : L('Видалити?'), '«' + e.name + '» ' + (perm ? L('буде видалено назавжди.') : L('буде переміщено в Кошик.') + (S.data.isWalls ? L('\nСписок заставки (walls.json) оновиться.') : '')), [
+    { label:L('Скасувати') },
+    { label:perm ? L('Видалити назавжди') : L('Видалити'), danger:true, fn:function () {
+      api('POST', '/api/delete', { paths:[e.path] }).then(function (r) {
+        if (!r.done.length) throw new Error(r.failed[0] ? L(r.failed[0].error) : '?');
+        toast(L('Видалено «') + e.name + '»' + (r.wallsCount != null ? L(' · у шпалерах тепер ') + r.wallsCount : ''), 4000);
+        S.pvList.splice(S.pvIdx, 1);
+        var i = S.entries.indexOf(e); if (i >= 0) S.entries.splice(i, 1);
+        refreshPlaces();
+        if (!S.pvList.length) { pvClose(); return; }
+        if (S.pvIdx >= S.pvList.length) S.pvIdx = 0;
+        pvShow();
+      }).catch(function (x) { toast(L('Помилка: ') + x.message); });
+    } }
+  ], 0);
+}
+
+// ---------- media: shared ----------
+// Source order: file:// first (native WAM media pipeline reads the stick directly, any size, no copy),
+// then our root server over HTTP with Range (for paths the file:// sandbox refuses).
+function mediaSrcs(p) { return [{ how:'file', url:localUrl(p) }, { how:'http', url:fileUrl(p) }]; }
+function setProg(id, cur, dur, buf) {
+  var pr = $(id), f = dur > 0 ? Math.min(1, cur / dur) : 0;
+  pr.querySelector('.cur').style.width = (f * 100) + '%';
+  pr.querySelector('.knob').style.left = (f * 100) + '%';
+  pr.querySelector('.buf').style.width = (dur > 0 && buf != null ? Math.min(100, buf / dur * 100) : 0) + '%';
+}
+function bufEnd(m) { try { var b = m.buffered; for (var i = 0; i < b.length; i++) if (b.start(i) <= m.currentTime + 1 && b.end(i) >= m.currentTime) return b.end(i); } catch (e) {} return null; }
+var MEDIA_ERR = { 1:L('перервано'), 2:L('помилка мережі/читання'), 3:L('помилка декодування'), 4:L('формат не підтримується') };
+function loadMedia(m, p, onFail) {
+  var srcs = mediaSrcs(p), k = 0;
+  function tryNext() {
+    if (k >= srcs.length) { onFail(m.error ? MEDIA_ERR[m.error.code] || (L('код ') + m.error.code) : L('не вдалося відкрити')); return; }
+    m._how = srcs[k].how; m.src = srcs[k++].url; m.load();
+    var pr = m.play(); if (pr && pr.catch) pr.catch(function () {});
+  }
+  m.onerror = function () { if (m._cur !== p) return; tryNext(); };
+  m._cur = p; tryNext();
+}
+function stopMedia(m) { m.onerror = null; m._cur = null; try { m.pause(); } catch (e) {} m.removeAttribute('src'); try { m.load(); } catch (e) {} }
+function savePos(p, t, d) { try { if (d > 300 && t > 30 && t < d - 30) localStorage.setItem('pos:' + p, String(Math.floor(t))); else localStorage.removeItem('pos:' + p); } catch (e) {} }
+function getPos(p) { try { return +localStorage.getItem('pos:' + p) || 0; } catch (e) { return 0; } }
+
+// Keep the TV's own screensaver away while something plays (tvpower asks registered clients before showing it).
+var ssBridge = null;
+function blockSaver(on) {
+  if (!on) { if (ssBridge) { try { ssBridge.cancel(); } catch (e) {} ssBridge = null; } return; }
+  if (ssBridge) return;
+  try {
+    ssBridge = new PalmServiceBridge();
+    ssBridge.onservicecallback = function (s) {
+      var r = {}; try { r = JSON.parse(s); } catch (e) {}
+      if (r.state === 'Active' && r.timestamp != null) luna('luna://com.webos.service.tvpower/power/responseScreenSaverRequest', { clientName:'com.user.explorer', ack:false, timestamp:r.timestamp });
+    };
+    ssBridge.call('luna://com.webos.service.tvpower/power/registerScreenSaverRequest', JSON.stringify({ subscribe:true, clientName:'com.user.explorer' }));
+  } catch (e) { ssBridge = null; }
+}
+
+// ---------- video player ----------
+var vpHideT = null, osdT = null, seekT = null, seekTarget = null, seekRep = 0, seekLastT = 0, vpSaveT = null;
+function vpOpen() {
+  var e = S.entries[S.idx]; if (!e) return;
+  S.vpList = S.entries.filter(function (x) { return x.kind === 'video'; });
+  S.vpIdx = S.vpList.indexOf(e); if (S.vpIdx < 0) return;
+  S.zone = 'video'; $('vp').classList.add('on'); vpLoad();
+}
+function vpLoad() {
+  var e = S.vpList[S.vpIdx], v = $('vpv'), vp = $('vp');
+  S.idx = S.entries.indexOf(e);
+  vp.classList.remove('failed'); vp.classList.add('loading');
+  $('vptop').innerHTML = esc(e.name) + '<span>' + (S.vpList.length > 1 ? (S.vpIdx + 1) + ' / ' + S.vpList.length + ' · ' : '') + fmtSize(e.size) + '</span>';
+  var resume = getPos(e.path), resumed = false;
+  v.onloadedmetadata = function () {
+    if (resume && !resumed && v.duration > resume + 30) { resumed = true; v.currentTime = resume; osd(L('Продовжено з ') + fmtTime(resume), 2500); }
+    $('vptop').querySelector('span').textContent = (S.vpList.length > 1 ? (S.vpIdx + 1) + ' / ' + S.vpList.length + ' · ' : '') +
+      (v.videoWidth ? v.videoWidth + '×' + v.videoHeight + ' · ' : '') + fmtSize(e.size) + (v._how === 'http' ? L(' · через службу') : '');
+  };
+  v.onplaying = function () { vp.classList.remove('loading'); vpPaint(); blockSaver(true); };
+  v.onwaiting = function () { vp.classList.add('loading'); };
+  v.onpause = function () { vpPaint(); vpWake(true); savePos(e.path, v.currentTime, v.duration); };
+  v.onplay = vpPaint;
+  v.ontimeupdate = function () { if (seekTarget == null) vpTime(); };
+  v.onseeked = function () { vp.classList.remove('loading'); };
+  v.onended = function () { savePos(e.path, 0, 0); if (S.vpIdx < S.vpList.length - 1) { S.vpIdx++; vpLoad(); } else vpClose(); };
+  clearInterval(vpSaveT); vpSaveT = setInterval(function () { if (!v.paused) savePos(e.path, v.currentTime, v.duration); }, 5000);
+  loadMedia(v, e.path, function (why) {
+    vp.classList.remove('loading'); vp.classList.add('failed'); vpWake(true);
+    $('vperr').innerHTML = L('Не вдалося відтворити «') + esc(e.name) + '»<small>' + esc(why) + L('. Телевізор не підтримує цей формат або кодек у вбудованому програвачі.<br>BACK — назад, CH ± — інше відео.</small>');
+  });
+  vpWake();
+}
+function vpTime() { var v = $('vpv'); $('vptm').textContent = fmtTime(v.currentTime) + ' / ' + fmtTime(v.duration); setProg('vpprog', v.currentTime, v.duration, bufEnd(v)); }
+function vpPaint() { $('vppp').innerHTML = $('vpv').paused ? ICON.play : ICON.pause; vpTime(); }
+function vpWake(stay) { var vp = $('vp'); vp.classList.remove('hide'); clearTimeout(vpHideT); if (!stay && !$('vpv').paused) vpHideT = setTimeout(function () { vp.classList.add('hide'); }, 3500); }
+function osd(t, ms) { var o = $('vposd'); o.textContent = t; o.classList.add('on'); clearTimeout(osdT); osdT = setTimeout(function () { o.classList.remove('on'); }, ms || 900); }
+function vpToggle(force) {
+  var v = $('vpv'); if (!v.src) return;
+  if (force === 'play' || (force == null && v.paused)) { var pr = v.play(); if (pr && pr.catch) pr.catch(function () {}); osd('▶'); }
+  else { v.pause(); osd('❚❚'); }
+}
+// Held ◀▶ accelerates (10 s → 30 s → 60 s); the real seek is applied once keys settle, so the native pipeline seeks once.
+function vpSeek(dir, big) {
+  var v = $('vpv'); if (!isFinite(v.duration)) return;
+  var now = Date.now(); seekRep = now - seekLastT < 700 ? seekRep + 1 : 0; seekLastT = now;
+  var step = big ? 60 : seekRep > 12 ? 60 : seekRep > 5 ? 30 : 10;
+  if (seekTarget == null) seekTarget = v.currentTime;
+  seekTarget = Math.max(0, Math.min(v.duration - 1, seekTarget + dir * step));
+  osd((dir > 0 ? '» ' : '« ') + fmtTime(seekTarget), 1000);
+  $('vptm').textContent = fmtTime(seekTarget) + ' / ' + fmtTime(v.duration); setProg('vpprog', seekTarget, v.duration, null);
+  clearTimeout(seekT); seekT = setTimeout(function () { $('vp').classList.add('loading'); v.currentTime = seekTarget; seekTarget = null; }, 450);
+}
+function vpStep(d) { var n = S.vpIdx + d; if (n < 0 || n >= S.vpList.length) { toast(d > 0 ? L('Це останнє відео в папці') : L('Це перше відео в папці')); return; } savePos(S.vpList[S.vpIdx].path, $('vpv').currentTime, $('vpv').duration); S.vpIdx = n; vpLoad(); }
+function vpClose() {
+  var v = $('vpv'), e = S.vpList[S.vpIdx];
+  if (e && v.src) savePos(e.path, v.currentTime, v.duration);
+  clearInterval(vpSaveT); clearTimeout(seekT); seekTarget = null;
+  stopMedia(v); blockSaver(false);
+  $('vp').classList.remove('on', 'failed', 'loading'); S.zone = 'list'; renderAll();
+}
+function vpKey(k) {
+  vpWake();
+  if (k === KEY.OK || k === KEY.PLAYPAUSE) vpToggle();
+  else if (k === KEY.PLAY) vpToggle('play');
+  else if (k === KEY.PAUSE) vpToggle('pause');
+  else if (k === KEY.LEFT || k === KEY.RW) vpSeek(-1);
+  else if (k === KEY.RIGHT || k === KEY.FF) vpSeek(1);
+  else if (k === KEY.UP) vpSeek(1, true);
+  else if (k === KEY.DOWN) vpSeek(-1, true);
+  else if (k === KEY.PGUP) vpStep(-1);
+  else if (k === KEY.PGDN) vpStep(1);
+  else if (k === KEY.BACK || k === KEY.STOP) vpClose();
+  else return false;
+  return true;
+}
+
+// ---------- audio player (playlist = audio files of the current folder / search) ----------
+var apSaveT = null;
+function apOpen() {
+  var e = S.entries[S.idx]; if (!e) return;
+  S.apList = S.entries.filter(function (x) { return x.kind === 'audio'; });
+  S.apIdx = S.apList.indexOf(e); if (S.apIdx < 0) return;
+  S.apF = S.apIdx;
+  $('aph').textContent = L('Плейлист · ') + plural(S.apList.length, L('трек'), L('треки'), L('треків')) + ' · ' + (S.view === 'search' ? L('пошук «') + S.search.q + '»' : S.path);
+  $('apico').innerHTML = ICON.audio;
+  S.zone = 'audio'; $('ap').classList.add('on'); apLoad();
+}
+function apRows() {
+  $('aprows').innerHTML = S.apList.map(function (t, i) {
+    return '<div class="tr' + (i === S.apIdx ? ' cur' : '') + (i === S.apF ? ' tf' : '') + '" data-tr="' + i + '"><span class="n">' + (i === S.apIdx ? '▶' : i + 1) + '</span><span class="nm">' + esc(t.name) + '</span><span class="sz">' + fmtSize(t.size) + '</span></div>';
+  }).join('');
+  var rowH = 66, vis = Math.floor($('aplist').clientHeight / rowH);
+  var top = Math.max(0, Math.min(S.apF - Math.floor(vis / 2), S.apList.length - vis));
+  $('aprows').style.transform = 'translateY(' + (-Math.max(0, top) * rowH) + 'px)';
+}
+function apLoad() {
+  var e = S.apList[S.apIdx], a = $('apa');
+  $('aptt').textContent = e.name.replace(/\.[^.]+$/, '');
+  $('apts').textContent = L('Трек ') + (S.apIdx + 1) + L(' з ') + S.apList.length + ' · ' + fmtSize(e.size) + ' · ' + e.name.split('.').pop().toUpperCase();
+  a.ontimeupdate = function () { $('aptm').textContent = fmtTime(a.currentTime) + ' / ' + fmtTime(a.duration); setProg('approg', a.currentTime, a.duration, bufEnd(a)); };
+  a.onplay = a.onpause = function () { $('appp').innerHTML = a.paused ? ICON.play : ICON.pause; $('ap').classList.toggle('playing', !a.paused); blockSaver(!a.paused); };
+  a.onended = function () { if (S.apIdx < S.apList.length - 1) { S.apIdx++; S.apF = S.apIdx; apLoad(); } else { $('ap').classList.remove('playing'); toast(L('Плейлист закінчився')); } };
+  $('appp').innerHTML = ICON.pause;
+  loadMedia(a, e.path, function (why) {
+    toast(L('Не вдалося відтворити «') + e.name + '»: ' + why, 4000);
+    setTimeout(function () { if (S.zone === 'audio' && S.apList[S.apIdx] === e && S.apIdx < S.apList.length - 1) { S.apIdx++; S.apF = S.apIdx; apLoad(); } }, 1500);
+  });
+  apRows();
+}
+function apSeek(d) { var a = $('apa'); if (isFinite(a.duration)) a.currentTime = Math.max(0, Math.min(a.duration - 0.5, a.currentTime + d)); }
+function apToggle(force) { var a = $('apa'); if (force === 'play' || (force == null && a.paused)) { var pr = a.play(); if (pr && pr.catch) pr.catch(function () {}); } else a.pause(); }
+function apClose() { stopMedia($('apa')); blockSaver(false); $('ap').classList.remove('on', 'playing'); S.zone = 'list'; var e = S.apList[S.apIdx]; if (e) S.idx = Math.max(0, S.entries.indexOf(e)); renderAll(); }
+function apKey(k) {
+  if (k === KEY.UP) { if (S.apF > 0) S.apF--; apRows(); }
+  else if (k === KEY.DOWN) { if (S.apF < S.apList.length - 1) S.apF++; apRows(); }
+  else if (k === KEY.OK) { if (S.apF === S.apIdx) apToggle(); else { S.apIdx = S.apF; apLoad(); } }
+  else if (k === KEY.PLAYPAUSE) apToggle();
+  else if (k === KEY.PLAY) apToggle('play');
+  else if (k === KEY.PAUSE) apToggle('pause');
+  else if (k === KEY.LEFT || k === KEY.RW) apSeek(-10);
+  else if (k === KEY.RIGHT || k === KEY.FF) apSeek(10);
+  else if (k === KEY.PGUP) { if (S.apIdx > 0) { S.apIdx--; S.apF = S.apIdx; apLoad(); } }
+  else if (k === KEY.PGDN) { if (S.apIdx < S.apList.length - 1) { S.apIdx++; S.apF = S.apIdx; apLoad(); } }
+  else if (k === KEY.BACK || k === KEY.STOP) apClose();
+  else return false;
+  return true;
+}
+
+// ---------- search (wallpapers + USB sticks) ----------
+function runSearch(q) {
+  q = String(q || '').trim(); if (!q) return Promise.resolve();
+  if (S.view !== 'search') S.searchBack = S.view === 'fs' ? S.path : null;
+  toast(L('Шукаю «') + q + '»…', 15000);
+  return api('GET', '/api/search?q=' + encodeURIComponent(q)).then(function (r) {
+    $('toast').classList.remove('on');
+    S.view = 'search'; S.search = { q:q, truncated:r.truncated }; S.marked = {};
+    S.data = { writable:true, isWalls:false, isTrash:false };
+    S.entries = r.results.map(function (x) { return { name:x.name, path:x.path, dir:x.dir, size:x.size, mtime:x.mtime, type:x.type, image:x.image, kind:x.kind }; });
+    S.idx = 0; S.zone = 'list'; renderAll();
+    if (!S.entries.length) toast(L('Нічого не знайдено: «') + q + '»');
+  }).catch(function (e) { toast(L('Пошук не вдався: ') + e.message); });
+}
+function searchDialog() {
+  dialog(L('Пошук файлів'), L('Шукає за назвою в шпалерах і на всіх USB-накопичувачах.'), [
+    { label:L('Шукати'), fn:function () { runSearch(S._sq); } }, { label:L('Скасувати') }
+  ], 0);
+  var inp = document.createElement('input'); inp.type = 'text'; inp.placeholder = L('Назва файлу…'); inp.value = (S.search && S.search.q) || '';
+  var p = $('dlg').querySelector('p'); p.parentNode.insertBefore(inp, p.nextSibling);
+  inp.addEventListener('input', function () { S._sq = inp.value; }); S._sq = inp.value;
+  inp.addEventListener('keydown', function (ev) { if (ev.keyCode === 13) { ev.stopPropagation(); ev.preventDefault(); closeModal(); runSearch(inp.value); } });
+  osk.show(inp, { onEnter:function (v) { closeModal(); runSearch(v); }, onCancel:function () { closeModal(); } });
+}
+
+// ---------- наша екранна клавіатура (замість клавіатури LG) ----------
+// Поле вводу readonly + inputmode=none → системна клавіатура LG не з'являється; друкуємо самі.
+// Стрілки ходять по клавішах по колу в усі боки (вгору/вниз — до найближчої за горизонталлю), OK — натиснути,
+// Back — сховати/скасувати. Курсор пульта: клік по клавіші; відвів курсор із клавіатури — виділення гасне
+// (як у хабі), будь-яка кнопка повертає його. Фізична клавіатура теж друкує.
+// Текстовий курсор: ◀ ▶ (клавіші біля пробілу або 🟢/🔵) — друк і стирання там, де курсор.
+// Кольорові кнопки пульта, поки клавіатура на екрані, перекривають будь-яку іншу дію застосунку:
+// 🔴 Shift (двічі швидко — Caps Lock; у символах — друга сторінка) · 🟢 курсор ◀ · 🟡 очистити · 🔵 курсор ▶.
+var osk=(function(){
+  var LAY={
+    uk:[[L('й'),L('ц'),L('у'),L('к'),L('е'),L('н'),L('г'),L('ш'),L('щ'),L('з'),L('х'),L('ї')],[L('ф'),L('і'),L('в'),L('а'),L('п'),L('р'),L('о'),L('л'),L('д'),L('ж'),L('є')],[L('я'),L('ч'),L('с'),L('м'),L('и'),L('т'),L('ь'),L('б'),L('ю'),L('ґ'),"'"]],
+    ru:[[L('й'),L('ц'),L('у'),L('к'),L('е'),L('н'),L('г'),L('ш'),L('щ'),L('з'),L('х'),L('ъ')],[L('ф'),L('ы'),L('в'),L('а'),L('п'),L('р'),L('о'),L('л'),L('д'),L('ж'),L('э')],[L('я'),L('ч'),L('с'),L('м'),L('и'),L('т'),L('ь'),L('б'),L('ю'),'ё','-']],
+      en:[['q','w','e','r','t','y','u','i','o','p'],['a','s','d','f','g','h','j','k','l'],['z','x','c','v','b','n','m','-','.']],
+    num:[['1','2','3','4','5','6','7','8','9','0'],['@','#','&','_','-','+','(',')','/','='],['.',',',':',';','?','!','"',"'",'*','%']],
+    sym:[['[',']','{','}','<','>','^','~','`','|'],['\\','$','€','£','₴','°','§','©','®','™'],['…','«','»','–','—','•','№','±','×','÷']]
+  };
+  var lang='uk'; try{ lang=localStorage.getItem('oskLang')||'uk'; }catch(e){}
+  var mode=lang, shift=false, caps=false, lastShift=0, el=null, rowsEl=null, rows=[], r=0, c=0, target=null, opts=null, visible=false;
+  var pos=0, view=null, oldColor='', hl=true, leaveT=null, lastEnter=0;
+  var BS='<svg width="40" height="28" viewBox="0 0 46 32" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><path d="M15 3h27v26H15L3 16z"/><path d="M23 10l12 12M35 10L23 22"/></svg>';
+  function build(){
+    el=document.createElement('div'); el.className='osk'; el.id='osk';
+    rowsEl=document.createElement('div'); el.appendChild(rowsEl);
+    var hint=document.createElement('div'); hint.className='osk-hint';
+    hint.innerHTML=L('<span><i style="background:#e5323c"></i>Shift · двічі — Caps</span><span><i style="background:#2fb24c"></i>Стерти · утримати — усе</span><span><i style="background:#e8c21b"></i>◀ курсор</span><span><i style="background:#2d6fe0"></i>курсор ▶</span><span class="dim">Back — сховати</span>');
+    el.appendChild(hint);
+    document.body.appendChild(el);
+    el.addEventListener('mousedown', function(e){ if(e.preventDefault) e.preventDefault(); });   // не красти фокус
+    el.addEventListener('mouseleave', function(){ ptrLeave(); });
+  }
+  function keyDef(ch){ return {t:'ch', v:ch}; }
+  function upper(){ return shift||caps; }
+  function layout(){
+    var base=LAY[mode].map(function(row){ return row.map(keyDef); });
+    base[0].push({t:'bs', w:1.6});
+    var letters = mode==='uk'||mode==='ru'||mode==='en';
+    var bottom=[
+      letters ? {t:'shift', v: caps?'⇧ CAPS':'⇧ Aa', w:1.5} : {t:'sym', v: mode==='sym'?'123':'#+=', w:1.5},
+      {t:'mode', v: letters ? '123' : (lang==='en'?'ABC':L('АБВ')), w:1.3},
+      {t:'lang', v: {uk:L('УКР'),ru:L('РУС'),en:'ENG'}[lang]||'ENG', w:1.3},
+      {t:'sp', v:L('пробіл'), w:(opts&&opts.url&&letters) ? 3.1 : 6.6},
+      {t:'ok', v:L('Готово'), w:2.1}
+    ];
+    if(opts&&opts.url&&letters) bottom.splice(3,0,{t:'txt',v:'/',w:1},{t:'txt',v:'@',w:1},{t:'txt',v:'.com',w:1.5});   // адреси й пошта
+    return base.concat([bottom]);
+  }
+  function label(k){ if(k.t==='ch') return upper() ? k.v.toUpperCase() : k.v; return k.v; }
+  function render(){
+    rows=layout(); if(r>=rows.length) r=rows.length-1; if(c>=rows[r].length) c=rows[r].length-1;
+    rowsEl.innerHTML='';
+    rows.forEach(function(row,ri){
+      var rd=document.createElement('div'); rd.className='osk-row';
+      row.forEach(function(k,ci){
+        var b=document.createElement('div');
+        b.className='osk-key'+(k.t!=='ch'?' fn':'')+(k.t==='ok'?' ok':'')+(k.t==='shift'&&(shift||caps)?' on':'')+(k.t==='shift'&&caps?' caps':'');
+        b.style.flexGrow=String(k.w||1);
+        if(k.t==='bs') b.innerHTML=BS; else b.textContent=label(k);
+        b.addEventListener('mouseenter', function(){ lastEnter=Date.now(); hl=true; r=ri; c=ci; mark(); });
+        b.addEventListener('mouseleave', function(){ ptrLeave(); });
+        b.addEventListener('click', function(){ if(skipClick){ skipClick=false; return; } hl=true; r=ri; c=ci; mark(); press(k); });
+        if(k.t==='bs'){   // утримати ⌫ курсором — очистити все поле
+          b.addEventListener('mousedown', function(){ clearTimeout(holdT); holdT=setTimeout(function(){ skipClick=true; clearAll(); }, 600); });
+          b.addEventListener('mouseup', function(){ clearTimeout(holdT); });
+          b.addEventListener('mouseleave', function(){ clearTimeout(holdT); });
+        }
+        rd.appendChild(b);
+      });
+      rowsEl.appendChild(rd);
+    });
+    mark();
+  }
+  // курсор пульта пішов із клавіш (між ними чи за межі) — виділення гасне, як у хабі
+  var bsRun=0, bsLast=0;
+  var holdT=null, skipClick=false, downKey=0, downT=0, holdDone=false;
+  function clearAll(){ if(!target) return; setVal('',0); if(window.uiSnd) uiSnd.play('close'); }
+  function ptrLeave(){ var t0=Date.now(); clearTimeout(leaveT); leaveT=setTimeout(function(){ if(lastEnter<t0){ hl=false; mark(); } },80); }
+  function mark(){ var rs=rowsEl.children; for(var i=0;i<rs.length;i++){ var ks=rs[i].children; for(var j=0;j<ks.length;j++) ks[j].classList.toggle('focus', hl && i===r && j===c); } }
+
+  // ---- текст + видимий курсор (поле readonly, тож малюємо курсор власним шаром поверх поля) ----
+  function esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function paintView(){
+    if(!view||!target) return;
+    var q=target.getBoundingClientRect(), cs=getComputedStyle(target);
+    view.style.left=q.left+'px'; view.style.top=q.top+'px'; view.style.width=q.width+'px'; view.style.height=q.height+'px';
+    view.style.font=cs.font; view.style.letterSpacing=cs.letterSpacing;
+    view.style.paddingLeft=(parseFloat(cs.paddingLeft)+parseFloat(cs.borderLeftWidth||0))+'px'; view.style.paddingRight=cs.paddingRight;
+    var v=target.value||'';
+    view.innerHTML='<span class="osk-tx">'+esc(v.slice(0,pos))+'<i class="osk-caret"></i>'+esc(v.slice(pos))+'</span>';
+    var cr=view.querySelector('.osk-caret'), tx=view.firstChild;   // довгий текст: прокрутка, щоб курсор було видно
+    var room=q.width-parseFloat(cs.paddingLeft||0)-parseFloat(cs.paddingRight||0)-8;
+    var shiftX=Math.max(0, cr.offsetLeft-room);
+    tx.style.transform='translateX('+(-shiftX)+'px)';
+  }
+  function setVal(v, newPos){
+    if(!target) return; target.value=v; pos=Math.max(0, Math.min(v.length, newPos==null ? v.length : newPos));
+    try{ target.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){} if(opts&&opts.onChange) opts.onChange(v);
+    paintView();
+  }
+  function insert(t){ var v=target.value||''; setVal(v.slice(0,pos)+t+v.slice(pos), pos+t.length); }
+  function moveCaret(d){ var v=target.value||''; pos=Math.max(0, Math.min(v.length, pos+d)); paintView(); }
+
+  function toggleShift(){
+    var now=Date.now();
+    if(mode==='num'||mode==='sym'){ mode = mode==='sym' ? 'num' : 'sym'; render(); return; }   // у символах Shift — друга сторінка
+    if(caps){ caps=false; shift=false; }
+    else if(shift && now-lastShift<450){ caps=true; shift=false; }   // два швидкі Shift — Caps Lock
+    else shift=!shift;
+    lastShift=now;
+    render();
+  }
+  function press(k){
+    if(!target) return;
+    if(window.uiSnd) uiSnd.play(k.t==='left'||k.t==='right' ? 'tick' : 'ok');
+    var v=target.value||'';
+    if(k.t==='ch'){ insert(upper()?k.v.toUpperCase():k.v); if(shift){ shift=false; render(); } }
+    else if(k.t==='sp'){ insert(' '); }
+    else if(k.t==='txt'){ insert(k.v); }
+    else if(k.t==='bs'){ var nowB=Date.now(); bsRun = (nowB-bsLast<1500) ? bsRun+1 : 1; bsLast=nowB; if(bsRun===4){ var hs=el&&el.querySelector('.osk-hint span:nth-child(2)'); if(hs){ hs.classList.remove('flash'); void hs.offsetWidth; hs.classList.add('flash'); } }
+      if(pos>0) setVal(v.slice(0,pos-1)+v.slice(pos), pos-1); }
+    else if(k.t==='clr'){ setVal('',0); }
+    else if(k.t==='left'){ moveCaret(-1); }
+    else if(k.t==='right'){ moveCaret(1); }
+    else if(k.t==='shift'||k.t==='sym'){ toggleShift(); }
+    else if(k.t==='lang'){ lang = {uk:'ru',ru:'en',en:'uk'}[lang]||'uk'; try{ localStorage.setItem('oskLang',lang); }catch(e){} if(mode==='uk'||mode==='ru'||mode==='en') mode=lang; render(); }
+    else if(k.t==='mode'){ mode = (mode==='num'||mode==='sym') ? lang : 'num'; render(); }
+    else if(k.t==='ok'){ var o=opts; hide(); if(o&&o.onEnter) o.onEnter(v); }
+  }
+  // вгору/вниз — клавіша найближча за центром по горизонталі (ряди різної довжини)
+  function vert(d){
+    var rs=rowsEl.children, cur=rs[r]&&rs[r].children[c]; if(!cur) return;
+    var q=cur.getBoundingClientRect(), cx=q.left+q.width/2;
+    r=(r+d+rows.length)%rows.length;
+    var ks=rs[r].children, best=0, bd=1e9;
+    for(var j=0;j<ks.length;j++){ var b=ks[j].getBoundingClientRect(), dd=Math.abs(b.left+b.width/2-cx); if(dd<bd){ bd=dd; best=j; } }
+    c=best; mark();
+  }
+  function onKey(e){
+    if(!visible) return;
+    var k=e.keyCode, handled=true;
+    if(k===1536||k===1537){ return; }   // курсор пульта з'явився/зник — не дія
+    // виділення погашене курсором: перша стрілка/OK лише повертає його (як у хабі); кольорові діють одразу
+    if(!hl && (k===13 || (k>=37&&k<=40))){ hl=true; mark(); if(e.preventDefault) e.preventDefault(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); return; }
+    var isBs = k===404 || (k===13 && rows[r] && rows[r][c] && rows[r][c].t==='bs');
+    if(isBs && downKey===k){ if(!holdDone && Date.now()-downT>600){ holdDone=true; clearAll(); } if(e.preventDefault) e.preventDefault(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); return; }   // утримання
+    if(isBs){ downKey=k; downT=Date.now(); holdDone=false; }
+    hl=true;
+    if(k>=37 && k<=40 && window.uiSnd) uiSnd.play('tick');
+    if(k===37){ c=(c-1+rows[r].length)%rows[r].length; mark(); }
+    else if(k===39){ c=(c+1)%rows[r].length; mark(); }
+    else if(k===38){ vert(-1); }
+    else if(k===40){ vert(1); }
+    else if(k===13){ press(rows[r][c]); }
+    else if(k===403){ if(window.uiSnd) uiSnd.play('ok'); toggleShift(); }          // 🔴 Shift / Caps / друга сторінка символів
+    else if(k===404){ press({t:'bs'}); }                                            // 🟢 стерти символ
+    else if(k===405){ press({t:'left'}); }                                          // 🟡 курсор ◀
+    else if(k===406){ press({t:'right'}); }                                         // 🔵 курсор ▶
+    else if(k===461||k===27){ var o=opts; hide(); if(o&&o.onCancel) o.onCancel(); }
+    else if(e.key==='Backspace'||(k===8&&!e.key)){ press({t:'bs'}); }
+    else if(e.key && e.key.length===1 && !e.ctrlKey && !e.metaKey){ insert(e.key); }   // фізична клавіатура
+    else handled=false;
+    if(handled){ if(e.preventDefault) e.preventDefault(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); else if(e.stopPropagation) e.stopPropagation(); }
+  }
+  // кольорові кнопки «поверх» застосунку: ловимо й відпускання, щоб застосунок не спрацював на keyup
+  window.addEventListener('keydown', onKey, true);
+  window.addEventListener('keyup', function(e){ if(e.keyCode===downKey) downKey=0; }, true);
+  window.addEventListener('keyup', function(e){ if(visible && e.keyCode>=403 && e.keyCode<=406){ if(e.preventDefault) e.preventDefault(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); } }, true);
+  window.addEventListener('resize', function(){ if(visible) paintView(); });
+  function prep(inp){ try{ inp.readOnly=true; inp.setAttribute('inputmode','none'); inp.setAttribute('readonly','readonly'); }catch(e){} }
+  function show(inp, o){
+    if(!el) build(); prep(inp); target=inp; opts=o||{}; shift=false; caps=false; mode=lang; hl=true;
+    if(!visible){ r=0; c=0; }
+    pos=(inp.value||'').length;
+    visible=true; render(); el.classList.add('show'); document.body.classList.add('osk-on'); inp.classList.add('osk-target');
+    if(!view){ view=document.createElement('div'); view.className='osk-view'; document.body.appendChild(view); }
+    oldColor=inp.style.color; inp.style.color='transparent'; view.style.display='flex';
+    paintView(); setTimeout(paintView, 60); setTimeout(paintView, 260);   // поле могло зсунутися (вікно піднімається над клавіатурою)
+  }
+  function hide(){
+    if(!visible) return; visible=false; if(el) el.classList.remove('show'); document.body.classList.remove('osk-on');
+    if(target){ target.classList.remove('osk-target'); target.style.color=oldColor; }
+    if(view) view.style.display='none';
+    target=null; opts=null;
+  }
+  return { show:show, hide:hide, prep:prep, isOpen:function(){ return visible; } };
+})();
+window.osk=osk;
+
+// ---------- launch params: {"search":"…"} | {"path":"/…"} | {"probe":"/dir"} ----------
+function launchParams() { try { var p = window.PalmSystem && PalmSystem.launchParams; return typeof p === 'string' ? JSON.parse(p || '{}') : (p || {}); } catch (e) { return {}; } }
+function closeOverlays() {
+  if (S.zone === 'modal') closeModal();
+  if (S.zone === 'video') vpClose(); else if (S.zone === 'audio') apClose(); else if (S.zone === 'preview') pvClose();
+}
+function handleParams(p) {
+  p = p || {};
+  if (typeof p.search === 'string' && p.search.trim()) { closeOverlays(); return runSearch(p.search).then(function () { return true; }); }
+  if (typeof p.path === 'string' && p.path.charAt(0) === '/') { closeOverlays(); return openTarget(p.path).then(function () { return true; }); }
+  if (p.usb) { closeOverlays(); return openUsb().then(function () { return true; }); }
+  if (typeof p.probe === 'string') { closeOverlays(); runProbe(p.probe); return Promise.resolve(true); }
+  return Promise.resolve(false);
+}
+// {usb:true} (з нашого вікна «Флешку підключено»): відкрити першу флешку; вона могла ще монтуватися — чекаємо до 8 с
+function openUsb() {
+  var t0 = Date.now();
+  return new Promise(function (res) {
+    (function poll() {
+      refreshPlaces(true).then(function () {
+        var pl = S.places.filter(function (x) { return x.icon === 'usb' && !x.off; })[0];
+        if (pl) { S.zone = 'list'; openPath(pl.path).then(res, res); }
+        else if (Date.now() - t0 > 8000) { toast(L('Флешку не знайдено')); openPath(S.places[0].path).then(res, res); }
+        else setTimeout(poll, 700);
+      }, function () { setTimeout(poll, 700); });
+    })();
+  });
+}
+function openTarget(p) {
+  return api('GET', '/api/list?path=' + encodeURIComponent(p)).then(function () { S.zone = 'list'; return openPath(p); }, function () {
+    var name = p.slice(p.lastIndexOf('/') + 1);
+    return openPath(dirOf(p), name).then(function () { S.zone = 'list'; if (S.entries[S.idx] && S.entries[S.idx].name === name) activate(); });
+  });
+}
+
+// Dev aid: plays every media file in a folder for a few seconds and logs what the web media stack managed (to /tmp/explorer-client.log).
+function runProbe(dir) {
+  api('GET', '/api/list?path=' + encodeURIComponent(dir)).then(function (d) {
+    var files = d.entries.filter(function (e) { return e.kind === 'video' || e.kind === 'audio'; }), i = 0;
+    var v = $('vpv'); $('vp').classList.add('on'); S.zone = 'probe';
+    api('POST', '/api/log', { probe:'start', dir:dir, n:files.length, canPlay:['video/mp4','video/x-matroska','video/webm','video/mp2t','video/x-msvideo','audio/mpeg','audio/flac','audio/ogg','audio/mp4','audio/wav'].map(function (m) { return m + '=' + v.canPlayType(m); }) });
+    (function next() {
+      if (i >= files.length) { stopMedia(v); $('vp').classList.remove('on'); S.zone = 'list'; api('POST', '/api/log', { probe:'end' }); toast(L('Перевірку завершено')); return; }
+      var f = files[i++], p = (dir === '/' ? '' : dir) + '/' + f.name, srcs = mediaSrcs(p), k = 0, t0, done = false;
+      $('vptop').innerHTML = esc(f.name) + L('<span>перевірка ') + i + ' / ' + files.length + '</span>';
+      function finish(res) { if (done) return; done = true; clearTimeout(to); res.name = f.name; res.size = f.size; api('POST', '/api/log', res).then(function () {}, function () {}).then(function () { stopMedia(v); setTimeout(next, 600); }); }
+      function attempt() {
+        if (k >= srcs.length) return finish({ ok:false, err:v.error ? v.error.code : null, tried:k });
+        var s = srcs[k++]; t0 = Date.now();
+        v.onerror = function () { attempt(); };
+        v.onplaying = function () { var st = v.currentTime; setTimeout(function () { finish({ ok:v.currentTime > st + 0.5, how:s.how, w:v.videoWidth, h:v.videoHeight, dur:Math.round(v.duration), adv:+(v.currentTime - st).toFixed(2), ms:Date.now() - t0 }); }, 2500); };
+        v.src = s.url; v.load(); var pr = v.play(); if (pr && pr.catch) pr.catch(function () {});
+      }
+      var to = setTimeout(function () { finish({ ok:false, timeout:true, how:srcs[k - 1] && srcs[k - 1].how, w:v.videoWidth, rs:v.readyState, ns:v.networkState }); }, 15000);
+      attempt();
+    })();
+  }).catch(function (e) { toast('probe: ' + e.message); });
+}
+
+// ---------- navigation ----------
+function activate() {
+  var e = S.entries[S.idx]; if (!e) return;
+  if (e.type === 'dir') { if (S.view === 'trash') toast(L('Зелена кнопка — відновити')); else openPath(e.path); return; }
+  if (e.image) pvOpen();
+  else if (e.kind === 'video') vpOpen();
+  else if (e.kind === 'audio') apOpen();
+  else toast(S.view === 'trash' ? L('Зелена кнопка — відновити') : L('Відкриваються зображення, відео та аудіо'));
+}
+function goBack() {
+  if (Object.keys(S.marked).length) { S.marked = {}; renderAll(); return; }
+  if (S.zone === 'side') { closeApp(); return; }
+  if (S.view === 'search') { var back = S.searchBack; S.searchBack = null; openPath(back || S.places[0].path); return; }
+  if (S.view === 'fs' && S.data && S.data.parent) {
+    var cur = S.path, place = S.places.filter(function (pl) { return pl.path === cur; })[0];
+    if (!place) { openPath(S.data.parent, cur.slice(cur.lastIndexOf('/') + 1)); return; }
+  }
+  S.zone = 'side'; renderAll();
+}
+// Back on the side panel → LG's own exit question (restyled by our hook 37), the same as in every other app (user's wish:
+// no separate «Закрити «Файли»?» dialog). The file service is stopped when the page really goes away.
+function closeApp() {
+  try { if (window.webOSSystem && webOSSystem.platformBack) { webOSSystem.platformBack(); return; } } catch (e) {}
+  try { window.close(); } catch (e) {}
+}
+window.addEventListener('pagehide', function () { try { navigator.sendBeacon(API + '/api/quit', ''); } catch (e) {} });
+function openPlace(i) {
+  var pl = S.places[i]; if (!pl || pl.off) { if (pl && pl.off) toast(L('Вставте флешку в USB-порт телевізора')); return; }
+  S.side = i; S.zone = 'list';
+  (pl.view === 'trash' ? openTrash() : openPath(pl.path));
+}
+// Безпечне виймання флешки: зупинити відтворення з неї, піти з її папок, скинути кеш і відключити через LG.
+function ejectPlace(pl) {
+  if (S.busy) { toast(L('Зачекайте, триває копіювання…')); return; }
+  var onStick = function (p) { return p && (p === pl.path || p.indexOf(pl.path + '/') === 0); };
+  try { if (S.zone === 'video') vpClose(); if (S.zone === 'audio') apClose(); } catch (e) {}
+  try { var v = $('vpv'); if (v && onStick(decodeURIComponent(String(v.src || '')).replace(/^file:\/\//, ''))) stopMedia(v); } catch (e) {}
+  var leave = S.view === 'fs' && onStick(S.path);
+  toast(L('Готую «') + pl.title + L('» до виймання…'), 20000);
+  return api('POST', '/api/eject', { path:pl.path }).then(function (r) {
+    toast('«' + pl.title + L('» можна виймати'), 5000);
+    return refreshPlaces().then(function () { if (leave) return openPath(S.places[0].path); renderAll(); });
+  }).catch(function (e) { toast(L('Не вдалося: ') + e.message + L('. Закрийте файли з флешки й спробуйте ще раз.'), 6000); });
+}
+
+function act(a) {
+  if (S.busy && a !== 'back') { toast(L('Зачекайте, триває копіювання…')); return; }
+  if (S.zone === 'preview') {
+    if (a === 'del') pvDelete();
+    else if (a === 'import') { var e = S.pvList[S.pvIdx]; if (e) confirmImport([e]); }
+    else if (a === 'restore') { S.idx = S.entries.indexOf(S.pvList[S.pvIdx]); doRestore(); pvClose(); }
+    else if (a === 'back') pvClose();
+    else if (a === 'prev') pvStep(-1); else if (a === 'next') pvStep(1);
+    return;
+  }
+  if (a === 'del') doDelete();
+  else if (a === 'import') { if (canImport()) confirmImport(); else toast(S.data && S.data.isWalls ? L('Це вже папка шпалер') : L('Оберіть зображення')); }
+  else if (a === 'restore') doRestore();
+  else if (a === 'mark') toggleMark();
+  else if (a === 'menu') menu();
+  else if (a === 'eject') { var sp = sidePlace(); if (isStick(sp)) ejectPlace(sp); }
+  else if (a === 'back') goBack();
+}
+
+document.addEventListener('keydown', function (ev) {
+  var k = ev.keyCode, handled = true;
+  if (k === 8 || k === 27) k = KEY.BACK; // desktop testing
+  if (S.zone === 'modal') {
+    if (document.activeElement && document.activeElement.tagName === 'INPUT' && k !== KEY.UP && k !== KEY.DOWN && k !== KEY.BACK && k !== 13) return;
+    if (document.activeElement && document.activeElement.tagName === 'INPUT' && (k === KEY.UP || k === KEY.DOWN)) document.activeElement.blur();
+    var n = S.modal.buttons.length, col = $('dlg').querySelector('.btns.col');
+    if (S.modal.f < 0 && (k === KEY.UP || k === KEY.DOWN || k === KEY.LEFT || k === KEY.RIGHT || k === KEY.OK)) { S.modal.f = Math.max(0, Math.min(n - 1, S.modal.last)); paintModal(); ev.preventDefault(); return; }   // спершу повертаємо виділення
+    if ((col && k === KEY.UP) || (!col && k === KEY.LEFT)) { S.modal.f = (S.modal.f + n - 1) % n; paintModal(); }
+    else if ((col && k === KEY.DOWN) || (!col && k === KEY.RIGHT)) { S.modal.f = (S.modal.f + 1) % n; paintModal(); }
+    else if (k === KEY.OK) pressModal(S.modal.f);
+    else if (k === KEY.BACK) closeModal();
+    ev.preventDefault(); return;
+  }
+  if (S.zone === 'video') { if (vpKey(k)) ev.preventDefault(); return; }
+  if (S.zone === 'audio') { if (apKey(k)) ev.preventDefault(); return; }
+  if (S.zone === 'probe') { if (k === KEY.BACK) location.reload(); return; }
+  if (S.zone === 'preview') {
+    pvWake();
+    if (k === KEY.LEFT) pvStep(-1); else if (k === KEY.RIGHT) pvStep(1);
+    else if (k === KEY.BACK) pvClose();
+    else if (k === KEY.RED) act('del');
+    else if (k === KEY.GREEN) act(S.view === 'trash' ? 'restore' : 'import');
+    else if (k === KEY.OK) { var p = $('pv'); if (p.classList.contains('hide')) pvWake(); else pvDelete(); }
+    else handled = false;
+    if (handled) ev.preventDefault(); return;
+  }
+  if (S.zone === 'side') {
+    if (k === KEY.UP && S.side > 0) { S.side--; renderSide(); renderFooter(); }
+    else if (k === KEY.DOWN && S.side < S.places.length - 1) { S.side++; renderSide(); renderFooter(); }
+    else if (k === KEY.RED && isStick(S.places[S.side])) ejectPlace(S.places[S.side]);
+    else if (k === KEY.RIGHT) { S.zone = 'list'; renderAll(); }
+    else if (k === KEY.OK) openPlace(S.side);
+    else if (k === KEY.BACK) closeApp();
+    else handled = false;
+    if (handled) ev.preventDefault(); return;
+  }
+  var prev = S.idx, n2 = S.entries.length;
+  if (k === KEY.UP) { if (S.idx > 0) S.idx--; updateFocusRow(prev); }
+  else if (k === KEY.DOWN) { if (S.idx < n2 - 1) S.idx++; updateFocusRow(prev); }
+  else if (k === KEY.PGUP) { S.idx = Math.max(0, S.idx - 10); updateFocusRow(prev); }
+  else if (k === KEY.PGDN) { S.idx = Math.min(n2 - 1, S.idx + 10); updateFocusRow(prev); }
+  else if (k === KEY.LEFT) { S.zone = 'side'; S.side = activeSide(); renderAll(); }
+  else if (k === KEY.RIGHT) { if (S.entries[S.idx] && S.entries[S.idx].type === 'dir') activate(); }
+  else if (k === KEY.OK) activate();
+  else if (k === KEY.BACK) act('back');
+  else if (k === KEY.RED) act('del');
+  else if (k === KEY.GREEN) act(S.view === 'trash' ? 'restore' : 'import');
+  else if (k === KEY.YELLOW) act('mark');
+  else if (k === KEY.BLUE) act('menu');
+  else handled = false;
+  if (handled) ev.preventDefault();
+});
+
+// Magic Remote pointer / mouse
+document.addEventListener('click', function (ev) {
+  var t = ev.target.closest('[data-btn],[data-act],[data-side],[data-row],[data-tr],.prog'); if (!t) return;
+  if (t.dataset.btn != null) { pressModal(+t.dataset.btn); return; }
+  if (S.zone === 'modal') return;
+  if (S.zone === 'video') {
+    var v = $('vpv'); vpWake();
+    if (t.id === 'vpprog' && isFinite(v.duration)) { var r = t.getBoundingClientRect(); v.currentTime = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width)) * v.duration; }
+    else if (t.dataset.act === 'vpp') vpToggle();
+    return;
+  }
+  if (S.zone === 'audio') {
+    var a = $('apa');
+    if (t.id === 'approg' && isFinite(a.duration)) { var r2 = t.getBoundingClientRect(); a.currentTime = Math.max(0, Math.min(1, (ev.clientX - r2.left) / r2.width)) * a.duration; }
+    else if (t.dataset.act === 'app') apToggle();
+    else if (t.dataset.tr != null) { S.apF = S.apIdx = +t.dataset.tr; apLoad(); }
+    return;
+  }
+  if (t.dataset.act) { act(t.dataset.act); return; }
+  if (t.dataset.side != null) { openPlace(+t.dataset.side); return; }
+  if (t.dataset.row != null) { var prev = S.idx; S.zone = 'list'; if (S.idx === +t.dataset.row) activate(); else { S.idx = +t.dataset.row; renderSide(); updateFocusRow(prev); } }
+});
+document.addEventListener('mousemove', function () { if (S.zone === 'preview') pvWake(); else if (S.zone === 'video') vpWake(); });
+// меню й діалоги: наведення = виділення, курсор на порожньому місці = виділення зникає (як у хабі)
+(function () {
+  var lastKey = 0;
+  window.addEventListener('keydown', function () { lastKey = Date.now(); }, true);
+  document.addEventListener('mousemove', function (ev) {
+    if (S.zone !== 'modal' || !S.modal || Date.now() - lastKey < 400) return;
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+    var t = ev.target.closest && ev.target.closest('#dlg [data-btn]');
+    if (t) { var i = +t.dataset.btn; if (S.modal.f !== i) { S.modal.f = i; S.modal.last = i; paintModal(); } }
+    else if (S.modal.f >= 0 && !(ev.target.closest && ev.target.closest('.osk'))) { S.modal.last = S.modal.f; S.modal.f = -1; paintModal(); }
+  }, true);
+})();
+$('vpv').addEventListener('click', function () { if (S.zone === 'video') { if ($('vp').classList.contains('hide')) vpWake(); else vpToggle(); } });
+document.addEventListener('wheel', function (ev) { if (S.zone !== 'list') return; var prev = S.idx; S.idx = Math.max(0, Math.min(S.entries.length - 1, S.idx + (ev.deltaY > 0 ? 3 : -3))); updateFocusRow(prev); });
+
+// ---------- boot ----------
+$('appico').innerHTML = ICON.app;
+ensureServer().then(function () {
+  return refreshPlaces().then(function () { return handleParams(launchParams()); }).then(function (used) { if (!used || !S.view || (S.view === 'fs' && !S.path)) return openPath(S.places[0].path); });
+}).then(function () {
+  $('boot').classList.add('off');
+  setTimeout(function () { screenCopies(true); }, 8000);
+  setInterval(function () { if (S.zone !== 'modal' && !S.busy) refreshPlaces(true).catch(function () { ensureServer(); }); }, 3000);
+}).catch(function (e) {
+  var b = $('boot'); b.classList.add('err');
+  $('bootmsg').textContent = L('Не вдалося запустити службу файлів');
+  $('bootsub').textContent = e.message + L('. Потрібен Homebrew Channel (root). Натисніть OK, щоб спробувати ще раз.');
+  document.addEventListener('keydown', function (ev) { if (ev.keyCode === 13) location.reload(); });
+});
+document.addEventListener('webOSRelaunch', function (ev) {
+  if (!S.places.length) return;
+  var p = (ev && ev.detail && typeof ev.detail === 'object') ? ev.detail : launchParams();
+  refreshPlaces(true).catch(function () {}).then(function () { return handleParams(p); });
+});
+})();
+</script>
+</body>
+</html>

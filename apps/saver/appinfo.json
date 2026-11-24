@@ -1,0 +1,15 @@
+{
+  "id": "com.webos.app.screensaver",
+  "version": "3.0.0",
+  "vendor": "User",
+  "type": "web",
+  "main": "index.html",
+  "title": "Screen Saver",
+  "icon": "icon.png",
+  "visible": false,
+  "supportRollingScreenMode": true,
+  "defaultWindowType": "screenSaver",
+  "noSplashOnLaunch": true,
+  "requiredPermissions": ["all"],
+  "requiredACG": []
+}
