@@ -15,6 +15,9 @@ bindif(){ # src dst probe
 }
 D=/media/developer
 need_sm=0
+# 34: WAM DevTools port 9998 only on 127.0.0.1 (LD_PRELOAD libbindlocal.so via a bind-mounted copy of LG's
+# webapp-mgr.sh). FIRST, because WebAppMgr starts at ~15.6 s and must see the patched start script.
+[ -f /var/lib/webosbrew/init.d/34-devtools-local.sh ] && { sh /var/lib/webosbrew/init.d/34-devtools-local.sh; say "bindlocal: $(tail -n 1 /tmp/myhome-sec.log 2>/dev/null)"; }
 # 36: key filter config (HOME/SETTINGS/SOURCE/⋯/MIC + colour keys over the system keyboard)
 if [ -f $D/myhome-keyfilter/myhome-keys.js ] && bindif $D/myhome-keyfilter/com.webos.surfacemanager.json /etc/configd/layers/base/com.webos.surfacemanager.json ""; then
   # background: it took ~4.4 s and blocked everything after it

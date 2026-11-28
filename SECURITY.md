@@ -26,10 +26,17 @@ Please report problems privately via GitHub's «Report a vulnerability» (Securi
   browser's own tabs, so sites can be shown there. «Clickjacking» protection doesn't apply inside it.
 - **Ad / tracker blocking** (`/etc/hosts`) and LG's ad / tracking settings switched off — fewer third-party scripts.
 
+- **WebAppMgr's DevTools port 9998 is kept on the TV itself.** LG's own start script opens it
+  (`--remote-debugging-port=9998`) on all network interfaces with no password, so any device on your home network
+  could attach to a running web app and, through it, reach Homebrew Channel's root service. The engine has no
+  "listen address" option and the kernel has no firewall (no iptables, no tc), so we preload a tiny library
+  (`tv/bindlocal/bindlocal.c`, one function, no libc) that turns only `bind(0.0.0.0:9998)` into `bind(127.0.0.1:9998)`.
+  It is loaded through a bind-mounted copy of LG's `webapp-mgr.sh` with one extra `LD_PRELOAD` line (the stock file
+  is untouched), set up by hook `tv/hooks/34-devtools-local.sh` — at ~13 s from `early.sh`, before the engine starts.
+  Casting from phones, AirPlay and the ThinQ app use other ports and are not affected. The browser helper still uses
+  the port locally. Off: `touch /media/developer/myhome-sec/bindlocal.off` and reboot.
+
 ## Known open point
 
-- **WebAppMgr's DevTools port 9998** is opened by LG's own start script (`--remote-debugging-port=9998`, all network
-  interfaces) and has no password: any device on your home network can attach to running web apps. The browser
-  helper uses it locally. The kernel has no firewall (no iptables), so it can't simply be blocked; binding it to
-  localhost needs a patched WebAppMgr start script (planned). Until then: keep untrusted devices off your home
-  network (use a guest Wi-Fi for visitors).
+- Nothing big that we know of. Root itself is still root: keep the TV behind your router (never port-forward to it),
+  keep untrusted devices off your home network (guest Wi-Fi for visitors) and only install apps you trust.

@@ -105,6 +105,7 @@ nyx-cmd OSInfo query webos_release 2>/dev/null; [ -d /var/lib/webosbrew/init.d ]
   file(D + 'myhome-poweron/epg.py', path.join(R, 'services/epg/epg.py'));
   if (O.adblock) file(D + 'myhome-adblock/adblock.py', path.join(R, 'tv/adblock/adblock.py'));
   for (const f of ['cdp.py', 'framegate.py']) file(D + 'myhome-browser/' + f, path.join(R, 'services/browser', f));
+  file(D + 'myhome-sec/libbindlocal.so', path.join(R, 'tv/bindlocal/libbindlocal.so'));   // DevTools 9998 → 127.0.0.1 only (hook 34)
   for (const h of fs.readdirSync(path.join(R, 'tv/hooks')).sort()) {
     if (!O.adblock && /adblock/.test(h)) continue;
     file('var/lib/webosbrew/init.d/' + h, path.join(R, 'tv/hooks', h), 0o755);
@@ -154,6 +155,8 @@ rm -rf /tmp/lgb4u-ipk /tmp/lgb4u-inst.log
 # security: websites in the browser must not reach Homebrew Channel's root service (see SECURITY.md) — applied now,
 # not only at the next boot (hook 43 also starts the browser helper)
 sh /var/lib/webosbrew/init.d/43-browser.sh && echo "  browser + channels: no access to system services"
+# debug port 9998 → only the TV itself; takes effect when the web engine restarts (at the latest: next boot)
+sh /var/lib/webosbrew/init.d/34-devtools-local.sh && grep -q bindlocal /etc/systemd/system/scripts/webapp-mgr.sh && echo "  debug port 9998: local only from the next restart"
 ${setS('other', 'lgLogoDisplay', 'off')}
 ${PRIV.map(p => setS(...p)).join('\n')}
 sync`, { timeout: 600000 });

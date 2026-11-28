@@ -19,7 +19,7 @@ const ask = q => flag('--yes') ? Promise.resolve(true) : new Promise(res => { co
   const out = tv.sh(`D=/media/developer
 # 1. nothing of ours starts at the next boot
 rm -f /var/systemd/system/env/criu_remove_img.env
-for h in 29-saver-takeover 30-myhome-takeover 33-a11y-overlay-off 36-keyfilter-patch 37-notif-restyle 38-inputcommon-patch 40-maliit-restyle 41-poweron-home 42-adblock 43-browser; do rm -f /var/lib/webosbrew/init.d/$h.sh; done
+for h in 29-saver-takeover 30-myhome-takeover 33-a11y-overlay-off 34-devtools-local 36-keyfilter-patch 37-notif-restyle 38-inputcommon-patch 40-maliit-restyle 41-poweron-home 42-adblock 43-browser; do rm -f /var/lib/webosbrew/init.d/$h.sh; done
 touch $D/myhome-poweron/pwrkey.off $D/myhome-poweron/epg.off $D/myhome-adblock/adblock.off $D/myhome-browser/framegate.off 2>/dev/null
 # 2. stop our background scripts (match the python/sh command line only — never this ssh session)
 for p in $(pgrep -f myhome-poweron/; pgrep -f myhome-adblock/; pgrep -f myhome-browser/); do case "$(tr '\\0' ' ' </proc/$p/cmdline 2>/dev/null)" in python3*|/bin/sh*poweron-home.sh*|/bin/sh\\ -c\\ while*) kill $p 2>/dev/null;; esac; done
@@ -28,7 +28,8 @@ for m in /usr/palm/applications/com.webos.app.screensaver/walls-screen /usr/palm
          /usr/palm/applications/com.webos.app.screensaver/walls /usr/palm/applications/com.webos.app.screensaver \\
          /usr/palm/applications/com.webos.app.home /usr/palm/applications/com.webos.app.accessibility-overlay \\
          /etc/configd/layers/base/com.webos.surfacemanager.json /usr/lib/qml/SystemUI/Notification \\
-         /usr/palm/applications/com.webos.app.inputcommon/qml /usr/lib/maliit/plugins/qml; do
+         /usr/palm/applications/com.webos.app.inputcommon/qml /usr/lib/maliit/plugins/qml \
+         /etc/systemd/system/scripts/webapp-mgr.sh; do
   grep -q " $m " /proc/mounts && umount $m && echo "  unmounted $m"
 done
 # 4. LG's input-app snapshot back (it was moved aside so LG would not restore its stock QML over our patch)
@@ -43,7 +44,7 @@ done
 systemctl stop myhome-explorer 2>/dev/null
 # 6. LG logo at power-on back on
 luna-send -n 1 -a com.webos.app.home luna://com.webos.settingsservice/setSystemSettings '{"category":"other","settings":{"lgLogoDisplay":"on"}}' </dev/null >/dev/null 2>&1
-${flag('--purge') ? 'rm -rf /var/lib/myhome $D/myhome-home $D/myhome-saver $D/myhome-keyfilter $D/notif-patched $D/inputcommon-patched $D/maliit-qml $D/myhome-poweron $D/myhome-adblock $D/myhome-browser $D/a11y-empty $D/.explorer-trash; rmdir $D/criu-backup/emmc $D/criu-backup 2>/dev/null; echo "  data folders deleted"' : 'rm -rf /var/lib/myhome; echo "  data folders kept in $D (use --purge to delete)"'}
+${flag('--purge') ? 'rm -rf /var/lib/myhome $D/myhome-home $D/myhome-saver $D/myhome-keyfilter $D/notif-patched $D/inputcommon-patched $D/maliit-qml $D/myhome-poweron $D/myhome-adblock $D/myhome-browser $D/myhome-sec $D/a11y-empty $D/.explorer-trash; rmdir $D/criu-backup/emmc $D/criu-backup 2>/dev/null; echo "  data folders deleted"' : 'rm -rf /var/lib/myhome; echo "  data folders kept in $D (use --purge to delete)"'}
 sync`, { timeout: 300000 });
   console.log(out.trimEnd());
   console.log('\nDone. LG ad/privacy settings that the installer switched off stay off (change them in LG settings).');
