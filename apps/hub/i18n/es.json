@@ -249,7 +249,6 @@
  "Зміна фото кожні": "Cambiar foto cada",
  "Як часто змінюється фото у заставці.": "Con qué frecuencia cambia la foto del salvapantallas.",
  "DVD-відскоки годинника": "Reloj rebotando estilo DVD",
- "Годинник плаває по екрану й відскакує від країв (як логотип DVD). Вимкни — годинник стоятиме по центру.": "El reloj flota por la pantalla y rebota en los bordes (como el logo de DVD). Desactivado — el reloj queda centrado.",
  "Екранна заставка": "Salvapantallas",
  "Запуск заставки після простою (захист OLED від вигоряння).": "Inicia el salvapantallas tras inactividad (protege el OLED del quemado).",
  "Заставка поверх усього (системна)": "Salvapantallas sobre todo (sistema)",
@@ -513,5 +512,6 @@
  "Інверсія кольорів": "Invertir colores",
  "Інвертує кольори екрана. На частині вмісту не діє.": "Invierte los colores de la pantalla. No se aplica a todo el contenido.",
  "Повний сигнал HDMI 2.1 (4K 120 Гц, HDR, 10 біт) для консолі чи ПК на цьому вході. Якщо пристрій не показує картинку — вимкни.": "Señal HDMI 2.1 completa (4K 120 Hz, HDR, 10 bits) para una consola o PC en esta entrada. Si el dispositivo no muestra imagen, desactívalo.",
- "Колір без стиснення (4:4:4): чіткий дрібний текст із ПК. Для фільмів та ігор не потрібно.": "Color sin comprimir (4:4:4): texto pequeño nítido desde un PC. No hace falta para películas y juegos."
+ "Колір без стиснення (4:4:4): чіткий дрібний текст із ПК. Для фільмів та ігор не потрібно.": "Color sin comprimir (4:4:4): texto pequeño nítido desde un PC. No hace falta para películas y juegos.",
+ "Годинник плаває по екрану й відскакує від країв (як логотип DVD). Вимкни — годинник стоїть по центру й непомітно зсувається щохвилини (захист OLED). Діє і на системну заставку.": "El reloj flota por la pantalla y rebota en los bordes (como el logo de DVD). Desactivado — el reloj queda en el centro y se desplaza ligeramente cada minuto (protección OLED). También se aplica al salvapantallas del sistema."
 }

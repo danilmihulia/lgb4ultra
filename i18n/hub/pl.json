@@ -249,7 +249,6 @@
  "Зміна фото кожні": "Zmiana zdjęcia co",
  "Як часто змінюється фото у заставці.": "Jak często zmienia się zdjęcie w wygaszaczu.",
  "DVD-відскоки годинника": "Odbijający się zegar DVD",
- "Годинник плаває по екрану й відскакує від країв (як логотип DVD). Вимкни — годинник стоятиме по центру.": "Zegar pływa po ekranie i odbija się od krawędzi (jak logo DVD). Wyłącz — zegar stanie na środku.",
  "Екранна заставка": "Wygaszacz ekranu",
  "Запуск заставки після простою (захист OLED від вигоряння).": "Uruchamia wygaszacz po bezczynności (chroni OLED przed wypaleniem).",
  "Заставка поверх усього (системна)": "Wygaszacz nad wszystkim (systemowy)",
@@ -513,5 +512,6 @@
  "Інверсія кольорів": "Odwróć kolory",
  "Інвертує кольори екрана. На частині вмісту не діє.": "Odwraca kolory ekranu. Nie działa dla części treści.",
  "Повний сигнал HDMI 2.1 (4K 120 Гц, HDR, 10 біт) для консолі чи ПК на цьому вході. Якщо пристрій не показує картинку — вимкни.": "Pełny sygnał HDMI 2.1 (4K 120 Hz, HDR, 10 bitów) dla konsoli lub PC na tym wejściu. Jeśli urządzenie nie pokazuje obrazu — wyłącz.",
- "Колір без стиснення (4:4:4): чіткий дрібний текст із ПК. Для фільмів та ігор не потрібно.": "Kolor bez kompresji (4:4:4): ostry drobny tekst z PC. Niepotrzebne do filmów i gier."
+ "Колір без стиснення (4:4:4): чіткий дрібний текст із ПК. Для фільмів та ігор не потрібно.": "Kolor bez kompresji (4:4:4): ostry drobny tekst z PC. Niepotrzebne do filmów i gier.",
+ "Годинник плаває по екрану й відскакує від країв (як логотип DVD). Вимкни — годинник стоїть по центру й непомітно зсувається щохвилини (захист OLED). Діє і на системну заставку.": "Zegar pływa po ekranie i odbija się od krawędzi (jak logo DVD). Wył. — zegar stoi na środku i co minutę niezauważalnie się przesuwa (ochrona OLED). Dotyczy też systemowego wygaszacza."
 }

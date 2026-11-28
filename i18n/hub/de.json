@@ -249,7 +249,6 @@
  "Зміна фото кожні": "Foto wechseln alle",
  "Як часто змінюється фото у заставці.": "Wie oft das Foto im Bildschirmschoner wechselt.",
  "DVD-відскоки годинника": "DVD-Hüpfuhr",
- "Годинник плаває по екрану й відскакує від країв (як логотип DVD). Вимкни — годинник стоятиме по центру.": "Die Uhr schwebt über den Bildschirm und prallt von den Rändern ab (wie das DVD-Logo). Aus — die Uhr steht in der Mitte.",
  "Екранна заставка": "Bildschirmschoner",
  "Запуск заставки після простою (захист OLED від вигоряння).": "Startet den Bildschirmschoner nach Inaktivität (schützt das OLED vor Einbrennen).",
  "Заставка поверх усього (системна)": "Bildschirmschoner über allem (System)",
@@ -513,5 +512,6 @@
  "Інверсія кольорів": "Farben umkehren",
  "Інвертує кольори екрана. На частині вмісту не діє.": "Kehrt die Bildschirmfarben um. Wirkt nicht bei allen Inhalten.",
  "Повний сигнал HDMI 2.1 (4K 120 Гц, HDR, 10 біт) для консолі чи ПК на цьому вході. Якщо пристрій не показує картинку — вимкни.": "Volles HDMI-2.1-Signal (4K 120 Hz, HDR, 10 Bit) für Konsole oder PC an diesem Eingang. Zeigt das Gerät kein Bild, ausschalten.",
- "Колір без стиснення (4:4:4): чіткий дрібний текст із ПК. Для фільмів та ігор не потрібно.": "Unkomprimierte Farbe (4:4:4): scharfer kleiner Text vom PC. Für Filme und Spiele nicht nötig."
+ "Колір без стиснення (4:4:4): чіткий дрібний текст із ПК. Для фільмів та ігор не потрібно.": "Unkomprimierte Farbe (4:4:4): scharfer kleiner Text vom PC. Für Filme und Spiele nicht nötig.",
+ "Годинник плаває по екрану й відскакує від країв (як логотип DVD). Вимкни — годинник стоїть по центру й непомітно зсувається щохвилини (захист OLED). Діє і на системну заставку.": "Die Uhr schwebt über den Bildschirm und prallt von den Rändern ab (wie das DVD-Logo). Aus — die Uhr steht in der Mitte und verschiebt sich jede Minute unmerklich (OLED-Schutz). Gilt auch für den System-Bildschirmschoner."
 }

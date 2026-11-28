@@ -49,25 +49,27 @@ say "daemon start"
 # settings (Access denied), so put the hub's choice into i18n/current.json + current.js next to each of them (+ our
 # system saver; our restyled system popups use LG's UI locale, which the hub switches too). Apps read it at start and when they come back to the
 # screen. Re-written on every change and when this daemon starts (covers reinstalled apps too).
-UI_LANG=""; UI_THEME=""
+UI_LANG=""; UI_THEME=""; UI_DVD="on"   # + the hub's saver clock mode (myhome/saverDvd) for our system saver
 write_ui(){
   for d in /media/developer/apps/usr/palm/applications/com.user.browser /media/developer/apps/usr/palm/applications/com.user.iptv \
            /media/developer/apps/usr/palm/applications/com.user.explorer /media/developer/myhome-saver; do
     [ -d "$d/i18n" ] || continue
-    printf '{"lang":"%s","theme":"%s"}' "$UI_LANG" "$UI_THEME" > "$d/i18n/current.json"
+    printf '{"lang":"%s","theme":"%s","dvd":"%s"}' "$UI_LANG" "$UI_THEME" "$UI_DVD" > "$d/i18n/current.json"
     # the browser can't use a sync XHR (framegate) → it loads this as a <script>
     printf 'window.__curLang="%s";window.__curTheme="%s";\n' "$UI_LANG" "$UI_THEME" > "$d/i18n/current.js"
   done
 }
 ( while :; do
-    luna-send -i luna://com.webos.settingsservice/getSystemSettings '{"category":"myhome","keys":["uiLang","uiTheme"],"subscribe":true}' </dev/null 2>/dev/null |
+    luna-send -i luna://com.webos.settingsservice/getSystemSettings '{"category":"myhome","keys":["uiLang","uiTheme","saverDvd"],"subscribe":true}' </dev/null 2>/dev/null |
     while read -r line; do
       v=$(echo "$line" | sed -n 's/.*"uiLang": *"\([a-z][a-z]\)".*/\1/p')
       t=$(echo "$line" | sed -n 's/.*"uiTheme": *"\([a-z]*\)".*/\1/p')
-      [ -n "$v$t" ] || continue
+      dv=$(echo "$line" | sed -n 's/.*"saverDvd": *"\([a-z]*\)".*/\1/p')
+      [ -n "$v$t$dv" ] || continue
+      [ -n "$dv" ] && UI_DVD=$dv
       [ -n "$v" ] && UI_LANG=$v
       [ -n "$t" ] && UI_THEME=$t
-      write_ui; say "ui -> lang=$UI_LANG theme=$UI_THEME"
+      write_ui; say "ui -> lang=$UI_LANG theme=$UI_THEME saverDvd=$UI_DVD"
     done
     sleep 30   # no value yet (hub never set it) or the subscription ended
   done ) &
@@ -91,6 +93,36 @@ priv_watch(){   # $1 category, $2 JSON key list
 }
 priv_watch general '["adCookie","personalRecommend","homePromotion","aiNudge","doNotSellMyPersonalInformation","lmt","screenSaverAd"]'
 priv_watch option '["thirdPartyCookie","hbbTvDeviceId"]'
+# PS5 rest → TV off (2026-11-28). With «Power Off Link» on, the PS5 sends this TV only <Inactive Source> (CEC 0x9D),
+# never <Standby> (seen in LG's /var/log/cecmessages), so LG keeps the TV on. If the PS5 (CEC logical address 4) was the
+# focused source when it says «inactive», nothing became active within 1 s AND the PS5 is what switched the TV on
+# (power-on reason hdmiCec), switch the TV off like the hub's «Вимкнути». TV switched on by the user (remote / hub)
+# or already on the hub/another input when the PS5 rests → nothing happens.
+# Off switch: touch /media/developer/myhome-poweron/cecoff.off
+cec_off_check(){
+  sleep 1   # was 8 s: the user wants the TV off at once (no slideshow flash)
+  [ -e /media/developer/myhome-poweron/cecoff.off ] && { say "cec: PS5 went to rest -> auto-off is paused (cecoff.off)"; return; }
+  after=$(tail -n 200 /var/log/cecmessages 2>/dev/null | awk '/Undefined opcode\(0x9D\)/{f=1; buf=""; next} f && /Focus l\.Addr\(|ActiveSource|Alread TV Power on|RoutingChange/{buf=buf $0 "\n"} END{printf "%s", buf}')
+  if [ -n "$after" ]; then say "cec: PS5 inactive, but a source became active again -> keep on"; return; fi
+  st=$(timeout 3 luna-send -n 1 luna://com.webos.service.tvpower/power/getPowerState '{}' </dev/null 2>/dev/null | sed -n 's/.*"state": *"\([^"]*\)".*/\1/p')
+  [ "$st" = "Active" ] || { say "cec: PS5 inactive, TV state '$st' -> nothing to do"; return; }
+  # the session belongs to the PS5 only if the PS5 switched the TV on (user rule 2026-11-28): TV on first (remote,
+  # hub, then PS5 via hub or controller) → the TV was not switched on for the PS5 → keep it on
+  why=$(timeout 3 luna-send -n 1 luna://com.webos.service.tvpower/power/getPowerOnReason '{}' </dev/null 2>/dev/null | sed -n 's/.*"reason": *"\([^"]*\)".*/\1/p')
+  [ "$why" = "hdmiCec" ] || { say "cec: PS5 went to rest, but the TV was switched on by '$why' (not the PS5) -> keep on"; return; }
+  say "cec: PS5 went to rest while on screen -> TV off (fg: $(fgapp))"
+  luna-send -n 1 luna://com.webos.service.tvpower/power2/powerOff '{"reason":"remoteKey"}' </dev/null >/dev/null 2>&1
+}
+( while :; do
+    focus=""
+    tail -n0 -F /var/log/cecmessages 2>/dev/null | while read -r l; do
+      case "$l" in
+        *"Focus l.Addr("*) focus=$(echo "$l" | sed -n 's/.*Focus l\.Addr(\([0-9]*\)).*/\1/p');;
+        *"Undefined opcode(0x9D)"*) if [ "$focus" = 4 ]; then cec_off_check & else say "cec: inactive source, focus=$focus -> ignore"; fi;;
+      esac
+    done
+    sleep 10   # log missing (very early boot) or tail ended
+  done ) &
 # «Канали» (com.user.iptv) replaces LG's Live TV everywhere (2026-11-22): whenever Live TV comes to the foreground
 # after boot (LG menus, keys, …), close it and open our IPTV app. Boot itself is handled by early.sh / guard.
 ( while :; do

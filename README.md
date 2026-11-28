@@ -19,7 +19,7 @@ Picture processing, HDMI, OLED protection, DRM and the firmware itself are **not
 | **Files** | File manager: USB sticks, wallpapers, trash, search, built-in video and audio player, import wallpapers from USB. |
 | **Channels** | Free public IPTV playlists ([iptv-org](https://github.com/iptv-org/iptv)) with a programme guide; replaces LG's Live TV and opens on the GUIDE / TV buttons. Add your own M3U links. |
 | **System** | LG alerts / toasts / USB card in the hub's style, our on-screen keyboard (remote colour keys work in it), no LG input banners, remote buttons → our screens (SETTINGS, SOURCE, GUIDE, digits, app buttons you choose). |
-| **Boot** | No LG hub at power-on: black screen, then our hub (~40 s). LG logo off. A PS5 (HDMI-CEC) power-on goes straight to the console. |
+| **Boot** | No LG hub at power-on: black screen, then our hub (~40 s). LG logo off. A PS5 (HDMI-CEC) power-on goes straight to the console, and when the PS5 switched the TV on, putting the PS5 to rest switches the TV off too (the PS5 never sends the CEC «standby» itself). |
 | **Privacy** | Ad / tracker blocking for the whole TV (`/etc/hosts`), LG advertising / tracking / «smart tips» settings switched off. |
 
 ## Will it work on my TV?

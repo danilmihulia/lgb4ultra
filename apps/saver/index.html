@@ -10,7 +10,7 @@
   .layer{position:fixed;inset:0;background-size:cover;background-position:center;opacity:0;
     transition:opacity 1.6s ease}
   .layer.on{opacity:1}
-  #clock{position:fixed;left:0;top:0;text-align:center;
+  #clock{position:fixed;left:0;top:0;text-align:center;font-variant-numeric:tabular-nums;
     color:#fff;text-shadow:0 2px 34px rgba(0,0,0,.55);will-change:transform}
   #time{font-size:112px;font-weight:200;letter-spacing:3px;line-height:1}
   #date{font-size:34px;font-weight:300;letter-spacing:1px;margin-top:22px;opacity:.72}
@@ -46,30 +46,54 @@
   var els=[document.getElementById('a'), document.getElementById('b')];
   var clock=document.getElementById('clock'), tEl=document.getElementById('time'), dEl=document.getElementById('date');
   function sh(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
-  function paint(){ var d=new Date();
+  // clock mode = the hub's «DVD-відскоки» (written by the TV daemon into i18n/current.json as "dvd"): off → still clock,
+  // nudged 20–40 px around the centre on every minute change (unnoticeable, but not the same OLED pixels all night)
+  var DVD=(function(){ try{ var x=new XMLHttpRequest(); x.open('GET','i18n/current.json',false); x.send(); return (JSON.parse(x.responseText)||{}).dvd!=='off'; }catch(e){ return true; } })();
+  function drift(){ if(DVD) return; var a=Math.random()*2*Math.PI, r=20+Math.random()*20;
+    clock.style.transform='translate(calc(-50% + '+Math.round(Math.cos(a)*r)+'px), calc(-50% + '+Math.round(Math.sin(a)*r)+'px))'; }
+  function paint(){ var d=new Date(); drift();
     tEl.textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
-    dEl.textContent=d.getDate()+' '+M[d.getMonth()]+' '+d.getFullYear()+({uk:' р.',ru:' г.'}[UILANG]||''); }
+    dEl.textContent=d.getDate()+' '+M[d.getMonth()]+' '+d.getFullYear()+({uk:' р.',ru:' г.'}[UILANG]||''); dvdResize(); }
   // clock has no seconds → repaint exactly on the minute change (one timer, no polling)
   function schedClock(){ paint(); setTimeout(schedClock, 60000-(Date.now()%60000)+50); }
 
   // DVD bounce: precomputed path (~240 s, then alternate — seamless), one element, 30 synced steps/s via CSS
   // steps() → straight lines, compositor-driven, ~1/3 the CPU of the old 60 fps JS loop.
-  function startDvd(){
-    var w=window.innerWidth||1920, h=window.innerHeight||1080, cw=clock.offsetWidth||420, ch=clock.offsetHeight||190;
-    var mx=Math.max(1,w-cw), my=Math.max(1,h-ch), FPS=30, VX=70, VY=52, T=240;
-    var x=Math.random()*mx, y=Math.random()*my, vx=(Math.random()<.5?-1:1)*VX, vy=(Math.random()<.5?-1:1)*VY, t=0, pts=[[0,x,y]];
-    while(t<T){
-      var tx = vx>0 ? (mx-x)/vx : -x/vx, ty = vy>0 ? (my-y)/vy : -y/vy, dt=Math.min(tx,ty,T-t);
+  var FPS=30, VX=70, VY=52, TT=240, dv=null, kf=null;
+  function path(x,y,vx,vy,mx,my){ var t=0, pts=[[0,x,y]];
+    while(t<TT){
+      var tx = vx>0 ? (mx-x)/vx : -x/vx, ty = vy>0 ? (my-y)/vy : -y/vy, dt=Math.max(0,Math.min(tx,ty,TT-t));
       x+=vx*dt; y+=vy*dt; t+=dt; pts.push([t,x,y]);
       if(tx<=dt+1e-6) vx=-vx; if(ty<=dt+1e-6) vy=-vy;
+      if(dt===0 && t<TT){ t+=1e-3; }
     }
-    var css='@keyframes dvd{';
-    for(var i=0;i<pts.length;i++){ var p=pts[i], seg = i<pts.length-1 ? Math.max(1, Math.round((pts[i+1][0]-p[0])*FPS)) : 1;
-      css+=(p[0]/t*100).toFixed(4)+'%{transform:translate('+p[1].toFixed(1)+'px,'+p[2].toFixed(1)+'px);animation-timing-function:steps('+seg+',end)}'; }
-    css+='}';
-    var st=document.createElement('style'); st.textContent=css; document.head.appendChild(st);
-    clock.style.animation='dvd '+t.toFixed(2)+'s linear 0s infinite alternate';
+    return { pts:pts, T:t };
   }
+  function run(p){
+    var css='@keyframes dvd{';
+    for(var i=0;i<p.pts.length;i++){ var q=p.pts[i], seg = i<p.pts.length-1 ? Math.max(1, Math.round((p.pts[i+1][0]-q[0])*FPS)) : 1;
+      css+=(q[0]/p.T*100).toFixed(4)+'%{transform:translate('+q[1].toFixed(1)+'px,'+q[2].toFixed(1)+'px);animation-timing-function:steps('+seg+',end)}'; }
+    css+='}';
+    if(!kf){ kf=document.createElement('style'); document.head.appendChild(kf); }
+    clock.style.animation='none'; kf.textContent=css; void clock.offsetWidth;
+    clock.style.animation='dvd '+p.T.toFixed(2)+'s linear 0s infinite alternate';
+    dv.pts=p.pts; dv.T=p.T; dv.start=Date.now();
+  }
+  function box(){ var w=window.innerWidth||1920, h=window.innerHeight||1080, cw=clock.offsetWidth||420, ch=clock.offsetHeight||190;
+    return { cw:cw, ch:ch, mx:Math.max(1,w-cw), my:Math.max(1,h-ch) }; }
+  // the path depends on the clock's size, which changes (digit widths, a new date) → re-checked on every repaint and,
+  // if it changed, rebuilt from the CURRENT point and direction (no jump). Was computed once → went past / short of edges.
+  function startDvd(){ var b=box(); dv=b;
+    run(path(Math.random()*b.mx, Math.random()*b.my, (Math.random()<.5?-1:1)*VX, (Math.random()<.5?-1:1)*VY, b.mx, b.my)); }
+  function dvdResize(){ if(!DVD||!dv||!dv.pts) return;
+    var b=box(); if(Math.abs(b.cw-dv.cw)<2 && Math.abs(b.ch-dv.ch)<2) return;
+    var T=dv.T, e=((Date.now()-dv.start)/1000)%(2*T), dir=1; if(e>T){ e=2*T-e; dir=-1; }
+    var P=dv.pts, i=0; while(i<P.length-2 && P[i+1][0]<e) i++;
+    var p0=P[i], p1=P[i+1]||p0, d=Math.max(1e-6,p1[0]-p0[0]), f=Math.min(1,Math.max(0,(e-p0[0])/d));
+    var x=Math.min(Math.max(0,p0[1]+(p1[1]-p0[1])*f),b.mx), y=Math.min(Math.max(0,p0[2]+(p1[2]-p0[2])*f),b.my);
+    var vx=(p1[1]-p0[1])*dir, vy=(p1[2]-p0[2])*dir;
+    dv.cw=b.cw; dv.ch=b.ch;
+    run(path(x, y, (vx<0?-1:1)*VX, (vy<0?-1:1)*VY, b.mx, b.my)); }
 
   function wallSrc(name, cb){ var s='walls-screen/'+encodeURIComponent(name)+'.jpg', o='walls/'+encodeURIComponent(name), im=new Image(); im.onload=function(){ cb(im.src.indexOf('walls-screen/')>=0?s:o); }; im.onerror=function(){ if(im.src.indexOf('walls-screen/')>=0) im.src=o; }; im.src=s; return im; }   // копія під екран (оригінали 8K–12K забивали памʼять → аварійні перезавантаження), інакше оригінал
   function next(){
@@ -111,7 +135,9 @@
     if(mvD>40) bye();
   }, true);
 
-  schedClock(); startDvd();
+  if(!DVD){ clock.style.left='50%'; clock.style.top='42%'; }
+  schedClock();          // paint the time + date first…
+  if(DVD) startDvd();    // …then measure the real clock size for the path
   fetch('walls.json').then(function(r){ return r.json(); }).then(function(a){
     list=(a||[]).filter(Boolean); order=sh(list.slice()); oi=0; if(order.length){ wallSrc(order[0], function(){}); } next(); setInterval(next, 60000);
   }).catch(function(){});

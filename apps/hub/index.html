@@ -1124,7 +1124,7 @@
       {cat:'saver',key:'saverEnabled',t:'onoff',local:true,ldef:'on',label:L('Наша заставка'),d:L('Слайдшоу з твоїх шпалер після простою (замість стандартної заставки LG). Вимкни, щоб екран нічого не показував у простої.'),sec:L('Заставка в хабі')},
       {cat:'saver',key:'saverIdleSec',t:'enum',vals:['30','60','120','300','600'],disp:[L('30 сек'),L('1 хв'),L('2 хв'),L('5 хв'),L('10 хв')],local:true,ldef:'120',label:L('Запуск після простою'),d:L('Скільки чекати без натискань, перш ніж увімкнути заставку.')},
       {cat:'saver',key:'saverSlideSec',t:'enum',vals:['15','30','60','120','300'],disp:[L('15 сек'),L('30 сек'),L('1 хв'),L('2 хв'),L('5 хв')],local:true,ldef:'60',label:L('Зміна фото кожні'),d:L('Як часто змінюється фото у заставці.')},
-      {cat:'saver',key:'saverDvd',t:'onoff',local:true,ldef:'on',label:L('DVD-відскоки годинника'),d:L('Годинник плаває по екрану й відскакує від країв (як логотип DVD). Вимкни — годинник стоятиме по центру.')},
+      {cat:'saver',key:'saverDvd',t:'onoff',local:true,ldef:'on',label:L('DVD-відскоки годинника'),d:L('Годинник плаває по екрану й відскакує від країв (як логотип DVD). Вимкни — годинник стоїть по центру й непомітно зсувається щохвилини (захист OLED). Діє і на системну заставку.')},
       {cat:'general',key:'screenSaverEnabled',t:'onoff',label:L('Екранна заставка'),d:L('Запуск заставки після простою (захист OLED від вигоряння).'),sec:L('Заставка поверх усього (системна)')},
       {cat:'option',key:'screenSaverTimer',t:'enum',vals:['3','10','20','30'],disp:[L('3 хв'),L('10 хв'),L('20 хв'),L('30 хв')],label:L('Заставка ТВ після простою'),d:L('Через скільки хвилин без дій телевізор сам запускає заставку (поверх будь-якого застосунку).')},
       {cat:'general',key:'noSignalScreenSaver',t:'onoff',label:L('Заставка без сигналу'),d:L('Заставка, коли немає сигналу на вході.')},
@@ -1235,7 +1235,7 @@
   // тема хаба (html.light) + спільне значення для наших застосунків: settings category "myhome", key "uiTheme"
   function applyHubTheme(){ var v=lsGet('uiTheme','dark'), h=new Date().getHours(); var light = v==='light' || (v==='auto' && h>=7 && h<20);
     document.documentElement.classList.toggle('light', light); }
-  function shareHubTheme(){ luna('luna://com.webos.settingsservice/setSystemSettings', {category:'myhome', settings:{uiTheme:lsGet('uiTheme','dark')}}, function(){}); }
+  function shareHubTheme(){ luna('luna://com.webos.settingsservice/setSystemSettings', {category:'myhome', settings:{uiTheme:lsGet('uiTheme','dark'), saverDvd:lsGet('saverDvd','on')}}, function(){}); }
   applyHubTheme(); setInterval(applyHubTheme, 60000); setTimeout(shareHubTheme, 3000);
   setTimeout(function(){ luna('luna://com.webos.settingsservice/setSystemSettings', {category:'myhome', settings:{ uiLang:UILANG }}, function(){}); }, 3500);   // keep myhome/uiLang present (the TV daemon passes it to our apps)
   // мова: спільне значення для наших застосунків + мова системи LG, потім перезапуск хаба з новим словником
@@ -1248,7 +1248,7 @@
       setTimeout(function(){ location.reload(); }, 600);
     });
   }
-  function applyLocalSetting(it){ if(it.key==='uiLang'){ applyLang(lsGet('uiLang','uk')); return; } if(it.key==='descMode' && settingsOpen) renderSettings(); if(it.key==='uiTheme'){ applyHubTheme(); shareHubTheme(); } if(it.local && window.saverApplyCfg) window.saverApplyCfg(); if(it.local && /^uiSound/.test(it.key) && window.uiSnd){ uiSnd.reload(); setTimeout(function(){ uiSnd.play('ok'); },150); } }
+  function applyLocalSetting(it){ if(it.key==='uiLang'){ applyLang(lsGet('uiLang','uk')); return; } if(it.key==='descMode' && settingsOpen) renderSettings(); if(it.key==='uiTheme'){ applyHubTheme(); shareHubTheme(); } if(it.key==='saverDvd') shareHubTheme(); if(it.local && window.saverApplyCfg) window.saverApplyCfg(); if(it.local && /^uiSound/.test(it.key) && window.uiSnd){ uiSnd.reload(); setTimeout(function(){ uiSnd.play('ok'); },150); } }
   function openSettings(){
     if(!settingsOpen && window.uiSnd) uiSnd.play('open'); settingsOpen=true; setCatIdx=0; setFocus=0; setov.classList.add('show');
     SETTINGS_CATS.forEach(function(s){ s.items.forEach(function(it){ if(it.local) it._val=lsGet(it.key, it.ldef); else it._val=undefined; }); });   // системні — лише свіже значення з ТВ
@@ -1961,24 +1961,44 @@
     // Траєкторія DVD рахується наперед (≈4 хв відскоків, далі alternate — без шва) і крутиться ОДНИМ елементом по обох осях,
     // кроки синхронні (≈20/с): плавно, без «драбинки», а композитор перемальовує кадр лише 20 разів/с.
     var DVD_VX=70, DVD_VY=52, DVD_T=240;
-    function startDvd(){ if(!clk||!clkIn) return; stopDvd(); if(!DVD) return;
-      var DVD_FPS=30;   // 30 кроків/с ≈34% CPU — користувач: «супер плавно» (60 кадрів ≈65% CPU — прибрано)   // 0 = linear (60 кадрів)
-      var w=window.innerWidth||1920, h=window.innerHeight||1080, cw=clkIn.offsetWidth||420, ch=clkIn.offsetHeight||190;
-      var mx=Math.max(1,w-cw), my=Math.max(1,h-ch);
-      var x=Math.random()*mx, y=Math.random()*my, vx=(Math.random()<.5?-1:1)*DVD_VX, vy=(Math.random()<.5?-1:1)*DVD_VY, t=0, pts=[[0,x,y]];
+    // Траєкторія рахується від розміру годинника; розмір змінюється (ширина цифр, нова дата) → на кожній зміні хвилини
+    // перевіряємо й, якщо змінився, будуємо нову траєкторію з ПОТОЧНОЇ точки й напрямку (без стрибка). Раніше її рахували
+    // один раз → годинник то заїжджав за край, то не діставав до нього.
+    var dvdS=null, DVD_FPS=30;   // 30 кроків/с ≈34% CPU — користувач: «супер плавно» (60 кадрів ≈65% CPU — прибрано)
+    function dvdPath(x,y,vx,vy,mx,my){ var t=0, pts=[[0,x,y]];
       while(t<DVD_T){
-        var tx = vx>0 ? (mx-x)/vx : -x/vx, ty = vy>0 ? (my-y)/vy : -y/vy, dt=Math.min(tx,ty,DVD_T-t);
+        var tx = vx>0 ? (mx-x)/vx : -x/vx, ty = vy>0 ? (my-y)/vy : -y/vy, dt=Math.max(0,Math.min(tx,ty,DVD_T-t));
         x+=vx*dt; y+=vy*dt; t+=dt; pts.push([t,x,y]);
         if(tx<=dt+1e-6) vx=-vx; if(ty<=dt+1e-6) vy=-vy;
+        if(dt===0 && t<DVD_T){ t+=1e-3; }
       }
+      return { pts:pts, T:t };
+    }
+    function dvdRun(p){
       var css="@keyframes svDVD{";
-      for(var i=0;i<pts.length;i++){ var p=pts[i], pct=(p[0]/t*100).toFixed(4);
-        var seg = i<pts.length-1 ? Math.max(1, Math.round((pts[i+1][0]-p[0])*DVD_FPS)) : 1;
-        css+=pct+"%{transform:translate("+p[1].toFixed(1)+"px,"+p[2].toFixed(1)+"px);animation-timing-function:"+(DVD_FPS>0?"steps("+seg+",end)":"linear")+"}"; }
+      for(var i=0;i<p.pts.length;i++){ var q=p.pts[i], pct=(q[0]/p.T*100).toFixed(4);
+        var seg = i<p.pts.length-1 ? Math.max(1, Math.round((p.pts[i+1][0]-q[0])*DVD_FPS)) : 1;
+        css+=pct+"%{transform:translate("+q[1].toFixed(1)+"px,"+q[2].toFixed(1)+"px);animation-timing-function:steps("+seg+",end)}"; }
       css+="}";
       var st=document.getElementById("svdvdkf"); if(!st){ st=document.createElement("style"); st.id="svdvdkf"; document.head.appendChild(st); }
-      st.textContent=css;
-      clk.style.animation="svDVD "+t.toFixed(2)+"s linear 0s infinite alternate"; }
+      clk.style.animation='none'; st.textContent=css; void clk.offsetWidth;
+      clk.style.animation="svDVD "+p.T.toFixed(2)+"s linear 0s infinite alternate";
+      dvdS.pts=p.pts; dvdS.T=p.T; dvdS.start=Date.now();
+    }
+    function dvdBox(){ var w=window.innerWidth||1920, h=window.innerHeight||1080, cw=clkIn.offsetWidth||420, ch=clkIn.offsetHeight||190;
+      return { cw:cw, ch:ch, mx:Math.max(1,w-cw), my:Math.max(1,h-ch) }; }
+    function startDvd(){ if(!clk||!clkIn) return; stopDvd(); if(!DVD) return;
+      var bx=dvdBox(); dvdS=bx;
+      dvdRun(dvdPath(Math.random()*bx.mx, Math.random()*bx.my, (Math.random()<.5?-1:1)*DVD_VX, (Math.random()<.5?-1:1)*DVD_VY, bx.mx, bx.my)); }
+    function dvdResize(){ if(!DVD||!dvdS||!dvdS.pts||!clk||clk.style.animation==='none') return;
+      var bx=dvdBox(); if(Math.abs(bx.cw-dvdS.cw)<2 && Math.abs(bx.ch-dvdS.ch)<2) return;
+      var T=dvdS.T, e=((Date.now()-dvdS.start)/1000)%(2*T), dir=1; if(e>T){ e=2*T-e; dir=-1; }
+      var P=dvdS.pts, i=0; while(i<P.length-2 && P[i+1][0]<e) i++;
+      var p0=P[i], p1=P[i+1]||p0, d=Math.max(1e-6,p1[0]-p0[0]), f=Math.min(1,Math.max(0,(e-p0[0])/d));
+      var x=p0[1]+(p1[1]-p0[1])*f, y=p0[2]+(p1[2]-p0[2])*f, vx=(p1[1]-p0[1])*dir, vy=(p1[2]-p0[2])*dir;
+      x=Math.min(Math.max(0,x),bx.mx); y=Math.min(Math.max(0,y),bx.my);
+      dvdS.cw=bx.cw; dvdS.ch=bx.ch; dvdS.mx=bx.mx; dvdS.my=bx.my;
+      dvdRun(dvdPath(x, y, (vx<0?-1:1)*DVD_VX, (vy<0?-1:1)*DVD_VY, bx.mx, bx.my)); }
     function stopDvd(){ if(clk) clk.style.animation='none'; }
     function build(){
       root=document.createElement('div');
@@ -1988,7 +2008,7 @@
       clk=document.createElement('div');
       clk.style.cssText=clkCss(DVD);
       clkIn=document.createElement('div'); clkIn.style.cssText='will-change:transform';
-      var tEl=document.createElement('div'); tEl.style.cssText='font-size:112px;font-weight:200;letter-spacing:3px;line-height:1';
+      var tEl=document.createElement('div'); tEl.style.cssText='font-size:112px;font-weight:200;letter-spacing:3px;line-height:1;font-variant-numeric:tabular-nums';
       var dEl=document.createElement('div'); dEl.style.cssText='font-size:34px;font-weight:300;letter-spacing:1px;margin-top:22px;opacity:.7';
       clkIn.appendChild(tEl); clkIn.appendChild(dEl); clk.appendChild(clkIn);
       root.appendChild(clk); root._t=tEl; root._d=dEl;
@@ -2001,7 +2021,12 @@
         if(mvDist>80) bye(e); });
       document.body.appendChild(root);
     }
-    function paintClock(){ if(!root) return; var d=new Date(); if(root._t) root._t.textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); if(root._d) root._d.textContent=d.getDate()+' '+MONTHS[d.getMonth()]+' '+d.getFullYear()+({uk:' р.',ru:' г.'}[UILANG]||''); }
+    // нерухомий годинник (DVD вимкнено): на кожній зміні хвилини зсуваємо його на 20–40 px у випадковий бік від центру —
+    // непомітно (цифри й так міняються), а для OLED це вже не та сама точка
+    var lastMin=-1;
+    function driftClock(){ if(!clk || DVD) return; var a=Math.random()*2*Math.PI, r=20+Math.random()*20, dx=Math.round(Math.cos(a)*r), dy=Math.round(Math.sin(a)*r);
+      clk.style.transform='translate(calc(-50% + '+dx+'px), calc(-50% + '+dy+'px))'; }
+    function paintClock(){ if(!root) return; var d=new Date(); if(d.getMinutes()!==lastMin){ lastMin=d.getMinutes(); driftClock(); } if(root._t) root._t.textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); if(root._d) root._d.textContent=d.getDate()+' '+MONTHS[d.getMonth()]+' '+d.getFullYear()+({uk:' р.',ru:' г.'}[UILANG]||''); dvdResize(); }
     // годинник без секунд → оновлюємо рівно на зміні хвилини (один таймер на наступну :00), а не опитуванням
     function schedClock(){ paintClock(); clearTimeout(clockTimer); clockTimer=setTimeout(schedClock, 60000-(Date.now()%60000)+50); }
     function wallSrc(name, cb){ var s='walls-screen/'+encodeURIComponent(name)+'.jpg', o='walls/'+encodeURIComponent(name), im=new Image(); im.onload=function(){ cb(im.src.indexOf('walls-screen/')>=0?s:o); }; im.onerror=function(){ if(im.src.indexOf('walls-screen/')>=0) im.src=o; }; im.src=s; return im; }   // копія під екран (оригінали 8K–12K забивали памʼять → аварійні перезавантаження), інакше оригінал
